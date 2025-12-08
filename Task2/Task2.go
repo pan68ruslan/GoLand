@@ -61,20 +61,24 @@ func ValidParentheses(s string) bool {
 			stack[idx] = c
 			idx++
 		} else { // check type and remove (pop) a previous open bracket
-			idx--
-			switch c {
-			case ')':
-				if stack[idx] != 40 { //'('
-					return false
+			if idx > 0 {
+				idx--
+				switch c {
+				case ')':
+					if stack[idx] != 40 { //'('
+						return false
+					}
+				case ']':
+					if stack[idx] != 91 { //'['
+						return false
+					}
+				case '}':
+					if stack[idx] != 123 { //'{'
+						return false
+					}
 				}
-			case ']':
-				if stack[idx] != 91 { //'['
-					return false
-				}
-			case '}':
-				if stack[idx] != 123 { //'{'
-					return false
-				}
+			} else {
+				return false
 			}
 		}
 	}
