@@ -10,7 +10,6 @@ func FibonacciIterative(n int) int {
 	for i := 1; i < n; i++ {
 		n2 += n1
 		n1 = n2 - n1
-		//fmt.Println(n2)
 	}
 	return n2
 }
@@ -102,12 +101,11 @@ func main() {
 	fmt.Println("FibonacciIterative(10):", FibonacciIterative(10))
 	fmt.Println("FibonacciRecursive(10):", FibonacciRecursive(10))
 
-	fmt.Println("IsPrime(2):", IsPrime(2))     // true
-	fmt.Println("IsPrime(15):", IsPrime(15))   // false
-	fmt.Println("IsPrime(29):", IsPrime(29))   // true
-	fmt.Println("IsPrime(822):", IsPrime(822)) // false
-	fmt.Println("IsPrime(823):", IsPrime(823)) // true
-
+	fmt.Println("IsPrime(2):", IsPrime(2))                         // true
+	fmt.Println("IsPrime(15):", IsPrime(15))                       // false
+	fmt.Println("IsPrime(29):", IsPrime(29))                       // true
+	fmt.Println("IsPrime(822):", IsPrime(822))                     // false
+	fmt.Println("IsPrime(823):", IsPrime(823))                     // true
 	fmt.Println("IsBinaryPalindrome(7):", IsBinaryPalindrome(7))   // true  (111)
 	fmt.Println("IsBinaryPalindrome(6):", IsBinaryPalindrome(6))   // false (110)
 	fmt.Println("IsBinaryPalindrome(9):", IsBinaryPalindrome(9))   // true  (1001)
