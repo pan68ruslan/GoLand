@@ -6,6 +6,9 @@ import (
 )
 
 func FibonacciIterative(n int) int {
+	if n < 2 {
+		return n
+	}
 	n1, n2 := 0, 1
 	for i := 1; i < n; i++ {
 		n2 += n1
@@ -25,12 +28,15 @@ func FibonacciRecursive(n int) int {
 }
 
 func IsPrime(n int) bool {
-	for i := 2; i <= n; i++ {
-		if n != i && n%i == 0 {
-			return false
+	if n > 1 {
+		for i := 2; i <= n; i++ {
+			if n != i && n%i == 0 {
+				return false
+			}
 		}
+		return true
 	}
-	return true
+	return false
 }
 
 func IsBinaryPalindrome(n int) bool {
@@ -87,24 +93,34 @@ func ValidParentheses(s string) bool {
 
 func Increment(num string) int {
 	digit := 0
-	for _, n := range num {
-		if n == '0' || n == '1' {
-			digit <<= 1
-			if n == '1' {
-				digit++
+	if len(num) > 0 {
+		for _, n := range num {
+			if n == '0' || n == '1' {
+				digit <<= 1
+				if n == '1' {
+					digit++
+				}
+			} else {
+				return 0
 			}
-		} else {
-			return 0
 		}
+		digit++
 	}
-	digit++
 	return digit
 }
 
 func main() {
+	fmt.Println("FibonacciIterative(-5)", FibonacciIterative(-5))
+	fmt.Println("FibonacciIterative(0)", FibonacciIterative(0))
 	fmt.Println("FibonacciIterative(10):", FibonacciIterative(10))
+
+	fmt.Println("FibonacciRecursive(-5)", FibonacciRecursive(-5))
+	fmt.Println("FibonacciRecursive(0)", FibonacciRecursive(0))
 	fmt.Println("FibonacciRecursive(10):", FibonacciRecursive(10))
 
+	fmt.Println("IsPrime(-1):", IsPrime(-1))
+	fmt.Println("IsPrime(0):", IsPrime(0))
+	fmt.Println("IsPrime(1):", IsPrime(1))
 	fmt.Println("IsPrime(2):", IsPrime(2))                         // true
 	fmt.Println("IsPrime(15):", IsPrime(15))                       // false
 	fmt.Println("IsPrime(29):", IsPrime(29))                       // true
@@ -120,6 +136,9 @@ func main() {
 	fmt.Println(`ValidParentheses("[[[]]]"):`, ValidParentheses("[[[]]]")) // true
 	fmt.Println(`ValidParentheses("[[[]]"):`, ValidParentheses("[[[]]"))   // false
 
+	fmt.Println(`Increment("") ->`, Increment(""))
+	fmt.Println(`Increment("0") ->`, Increment("0"))
+	fmt.Println(`Increment("1") ->`, Increment("1"))
 	fmt.Println(`Increment("101") ->`, Increment("101"))   // 6
 	fmt.Println(`Increment("10a") ->`, Increment("10a"))   // 0
 	fmt.Println(`Increment("1000") ->`, Increment("1000")) // 9
