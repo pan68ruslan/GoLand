@@ -14,17 +14,14 @@ func newTestService() *Service {
 
 func TestCreateUser(t *testing.T) {
 	svc := newTestService()
-
 	u, err := svc.CreateUser("u1", "Alice")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-
-	if u.ID != "u1" || u.Name != "Alice" {
+	switch {
+	case u.ID != "u1" || u.Name != "Alice":
 		t.Fatalf("unexpected user data: %+v", u)
 	}
-
-	// Creating same user again should fail
 	_, err = svc.CreateUser("u1", "Alice")
 	if err == nil {
 		t.Fatalf("expected error for duplicate user, got nil")
@@ -33,19 +30,14 @@ func TestCreateUser(t *testing.T) {
 
 func TestGetUser(t *testing.T) {
 	svc := newTestService()
-
 	svc.CreateUser("u1", "Alice")
-
 	u, err := svc.GetUser("u1")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-
 	if u.Name != "Alice" {
 		t.Fatalf("expected Alice, got %s", u.Name)
 	}
-
-	// Non-existing user
 	_, err = svc.GetUser("u2")
 	if err == nil {
 		t.Fatalf("expected error for missing user, got nil")
@@ -54,15 +46,12 @@ func TestGetUser(t *testing.T) {
 
 func TestListUsers(t *testing.T) {
 	svc := newTestService()
-
 	svc.CreateUser("u1", "Alice")
 	svc.CreateUser("u2", "Bob")
-
 	list, err := svc.ListUsers()
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-
 	if len(list) != 2 {
 		t.Fatalf("expected 2 users, got %d", len(list))
 	}
@@ -70,23 +59,17 @@ func TestListUsers(t *testing.T) {
 
 func TestDeleteUser(t *testing.T) {
 	svc := newTestService()
-
 	svc.CreateUser("u1", "Alice")
-
-	err := svc.DeleteUser("u1")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+	u, err := svc.GetUser("u1")
+	if u == nil || err != nil {
+		t.Fatalf("unexpected error for deleted user u1, %v", err)
 	}
-
-	// Should not exist anymore
-	_, err = svc.GetUser("u1")
-	if err == nil {
-		t.Fatalf("expected error for deleted user, got nil")
-	}
-
-	// Deleting non-existing user
 	err = svc.DeleteUser("u2")
 	if err == nil {
-		t.Fatalf("expected error for missing user, got nil")
+		t.Fatalf("expected error for existing user u2")
+	}
+	err = svc.DeleteUser("u1")
+	if err != nil {
+		t.Fatalf("unexpected error for missing user u1, %v", err)
 	}
 }

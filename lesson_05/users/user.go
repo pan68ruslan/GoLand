@@ -75,7 +75,7 @@ func (s *Service) GetUser(userId string) (*User, error) {
 		errs = append(errs, ErrUserIdIsEmpty)
 	}
 	u, ok := s.coll.Users[userId]
-	if !ok {
+	if u == nil || !ok {
 		errs = append(errs, fmt.Errorf("%w: id=%s", ErrUserNotFound, userId))
 	}
 	if len(errs) > 0 {
@@ -85,8 +85,9 @@ func (s *Service) GetUser(userId string) (*User, error) {
 }
 
 func (s *Service) DeleteUser(userId string) error {
-	if _, e := s.GetUser(userId); e != nil {
+	u, e := s.GetUser(userId)
+	if u != nil && e == nil {
 		delete(s.coll.Users, userId)
 	}
-	return nil
+	return e
 }

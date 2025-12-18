@@ -72,7 +72,7 @@ func TestUnmarshalDocument(t *testing.T) {
 			pass = false
 			t.Fatalf("expected value %v, got %v", tt.expValue, f.Value)
 		}
-		if pass {
+		if pass == true {
 			t.Logf("UnmarshalDocument test Passed")
 		}
 	}
@@ -114,7 +114,7 @@ func TestCheckFieldType(t *testing.T) {
 			pass = false
 			t.Fatalf("expected %v, got %v for value %v", tt.expected, typ, tt.value)
 		}
-		if pass {
+		if pass == true {
 			t.Logf("UnmarshalDocument test Passed")
 		}
 	}
