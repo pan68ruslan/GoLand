@@ -31,17 +31,24 @@ func main() {
 	fmt.Println("\nCreate user")
 	coll := &Users.Collection{Title: "IT Store"}
 	svc := Users.NewService(coll)
-	svc.CreateUser("u1", "Anna")
-	svc.CreateUser("u2", "Bob")
-	svc.CreateUser("u3", "Charlie")
-
+	if _, e := svc.CreateUser("u1", "Anna"); e != nil {
+		fmt.Println("Error at user creation %w", e)
+	}
+	if _, e := svc.CreateUser("u2", "Bob"); e != nil {
+		fmt.Println("Error at user creation %w", e)
+	}
+	if _, e := svc.CreateUser("u3", "Charlie"); e != nil {
+		fmt.Println("Error at user creation %w", e)
+	}
 	users, _ := svc.ListUsers()
 	fmt.Println(users)
 	fmt.Println("\nGet user")
 	user, _ := svc.GetUser("u1")
 	fmt.Println(user)
 	fmt.Println("\nDelete user")
-	svc.DeleteUser("u2")
-	usrs, _ := svc.ListUsers()
-	fmt.Println(usrs)
+	if e := svc.DeleteUser("u2"); e != nil {
+		fmt.Println("Error at user deletion %w", e)
+	}
+	users, _ = svc.ListUsers()
+	fmt.Println(users)
 }
