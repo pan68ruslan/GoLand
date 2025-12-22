@@ -20,7 +20,7 @@ func (s *Store) CreateCollection(name string, cfg *CollectionConfig) (bool, *Col
 	col := &Collection{
 		Name:      name,
 		Cfg:       cfg,
-		Documents: make(map[string]Document),
+		documents: make(map[string]Document),
 	}
 	s.collections[name] = col
 	fmt.Printf("[Store]The collection '%s' created\n", name)
