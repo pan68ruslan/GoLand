@@ -19,7 +19,7 @@ func TestCreateUser(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	switch {
-	case u.ID != "u1" || u.Name != "Alice":
+	case u == nil || u.ID != "u1" || u.Name != "Alice":
 		t.Fatalf("unexpected user data: %+v", u)
 	}
 	_, err = svc.CreateUser("u1", "Alice")
@@ -35,7 +35,7 @@ func TestGetUser(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if u.Name != "Alice" {
+	if u == nil || u.Name != "Alice" {
 		t.Fatalf("expected Alice, got %s", u.Name)
 	}
 	_, err = svc.GetUser("u2")

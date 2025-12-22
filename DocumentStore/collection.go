@@ -9,7 +9,7 @@ type Collection struct {
 }
 
 type CollectionConfig struct {
-	PrimaryKey string
+	PrimaryKey string `json:"PrimaryKey"`
 }
 
 func (s *Collection) Put(doc Document) {
