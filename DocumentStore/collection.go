@@ -8,6 +8,17 @@ type Collection struct {
 	documents map[string]Document
 }
 
+func NewCollection(name string, cfg *CollectionConfig) (*Collection, error) {
+	if cfg == nil || cfg.PrimaryKey == "" {
+		return nil, fmt.Errorf("[Collection]CollectionConfig is not configured")
+	}
+	return &Collection{
+		Name:      name,
+		Cfg:       cfg,
+		documents: make(map[string]Document),
+	}, nil
+}
+
 type CollectionConfig struct {
 	PrimaryKey string
 }

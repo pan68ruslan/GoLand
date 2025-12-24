@@ -17,10 +17,10 @@ func (s *Store) CreateCollection(name string, cfg *CollectionConfig) (bool, *Col
 		fmt.Printf("[Store]The collection '%s' already exists\n", name)
 		return false, nil
 	}
-	col := &Collection{
-		Name:      name,
-		Cfg:       cfg,
-		documents: make(map[string]Document),
+	col, err := NewCollection(name, cfg)
+	if err != nil {
+		fmt.Printf("[Store]Can't create the '%s' collection, error: %v\n", name, err.Error())
+		return false, nil
 	}
 	s.collections[name] = col
 	fmt.Printf("[Store]The collection '%s' created\n", name)
