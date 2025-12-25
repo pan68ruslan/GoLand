@@ -1,4 +1,4 @@
-package documentstore
+package document_store
 
 import (
 	"encoding/json"
@@ -31,7 +31,7 @@ type Document struct {
 	Fields map[string]DocumentField `json:"-"`
 }
 
-func (d Document) MarshalJSON() ([]byte, error) {
+func (d *Document) MarshalJSON() ([]byte, error) {
 	out := make(map[string]map[string]interface{})
 	for key, field := range d.Fields {
 		out[key] = map[string]interface{}{

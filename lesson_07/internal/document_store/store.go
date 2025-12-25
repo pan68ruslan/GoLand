@@ -1,4 +1,4 @@
-package documentstore
+package document_store
 
 import (
 	"encoding/json"
