@@ -20,7 +20,7 @@ func NewCollection(name string, cfg *CollectionConfig) (*Collection, error) {
 }
 
 type CollectionConfig struct {
-	PrimaryKey string
+	PrimaryKey string `json:"PrimaryKey"`
 }
 
 func (s *Collection) Put(doc Document) {
