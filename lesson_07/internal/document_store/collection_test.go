@@ -66,7 +66,7 @@ func TestCollection_PutGetDeleteList(t *testing.T) {
 	if !ok {
 		t.Errorf("expected to find doc1")
 	}
-	if got.Fields["title"].Value != "first" {
+	if got != nil && got.Fields["title"].Value != "first" {
 		t.Errorf("expected title 'first', got %v", got.Fields["title"].Value)
 	}
 	if !c.Delete("doc1") {
