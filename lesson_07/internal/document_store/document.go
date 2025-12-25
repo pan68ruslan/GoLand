@@ -7,9 +7,7 @@ import (
 )
 
 var (
-	ErrUnsupportedType = errors.New("unsupported type")
-	ErrWrongFieldType  = errors.New("wrong field")
-	ErrWrongDocument   = errors.New("wrong Document, type")
+	ErrWrongDocument = errors.New("wrong Document, type")
 )
 
 type DocumentFieldType string
