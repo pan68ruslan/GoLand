@@ -9,15 +9,15 @@ import (
 
 func main() {
 	fmt.Println("\nCreate document store")
-	storeName := "DB_Store"
+	storeName := "User_Store"
 	serviceName := "User_Service"
 	userId1 := "User1"
 	store := DocStore.NewStore(storeName)
 	if _, e := Users.NewService("", store); e != nil {
 		fmt.Printf("\nCannot create the document store: %v", e)
 	}
-	userService, e := Users.NewService(serviceName, store)
-	if e == nil {
+	userService, es := Users.NewService(serviceName, store)
+	if es == nil {
 		fmt.Printf("\nThe document store was created with name=%s", serviceName)
 	}
 	_, _ = userService.CreateUser(Users.User{ID: userId1, Name: "First_User"})
@@ -25,18 +25,18 @@ func main() {
 	_, _ = userService.CreateUser(Users.User{ID: "User3", Name: "Third_User"})
 
 	fmt.Println("\nUser store contains:")
-	if l, e := userService.ListUsers(); e == nil {
+	if l, err := userService.ListUsers(); err == nil {
 		for i, u := range l {
 			fmt.Printf("%d.User %s with name %s\n", i+1, u.ID, u.Name)
 		}
 	}
 
-	fmt.Println("\nFind the user with id:", userId1)
-	u, e := userService.GetUser(userId1)
-	if e == nil {
+	fmt.Println("\nFind the user with id=", userId1)
+	u, ee := userService.GetUser(userId1)
+	if ee == nil {
 		fmt.Printf("User with Id=%s was found. It has name=%s\n", userId1, u.Name)
 	} else {
-		fmt.Printf("User with Id=%s was not found. Error: %v\n", userId1, e)
+		fmt.Printf("User with Id=%s was not found. Error: %v\n", userId1, ee)
 	}
 
 	fmt.Println("\nUnmarshal Document to User structure:")
@@ -49,7 +49,7 @@ func main() {
 			}
 		}
 	}
-	fmt.Println("\nDelete the user with id:", userId1)
+	fmt.Println("\nDelete the user with id=", userId1)
 	if e := userService.DeleteUser(userId1); e == nil {
 		fmt.Printf("User with Id=%s was deleted.\n", userId1)
 	} else {
@@ -63,14 +63,14 @@ func main() {
 		}
 	}
 
-	fmt.Println("\nFind the user with id:", userId1)
+	fmt.Println("\nFind the user with id=", userId1)
 	if u, ok := userService.GetUser(userId1); ok == nil {
 		fmt.Printf("User with Id=%s was found. It has name=%s:\n", userId1, u.Name)
 	} else {
 		fmt.Printf("User with Id=%s was not found\n", userId1)
 	}
 
-	fmt.Println("\nDelete the user with id:", userId1)
+	fmt.Println("\nDelete the user with id=", userId1)
 	if e := userService.DeleteUser(userId1); e == nil {
 		fmt.Printf("User with Id=%s was deleted.\n", userId1)
 	} else {
@@ -80,9 +80,10 @@ func main() {
 	fmt.Println("\nMarshal the User structure do Document:")
 	unmarshalledUser.Name += "-Updated"
 	marshalledDoc, er := DocStore.MarshalStructureToDocument(&unmarshalledUser)
-	if er == nil {
-		collection.Put(marshalledDoc)
-		fmt.Printf("Marshalled Document was created with Id=%s\n", marshalledDoc.Fields["id"].Value)
+	if er == nil && collection != nil {
+		if e := collection.Put(marshalledDoc); e == nil {
+			fmt.Printf("Marshalled Document was created with Id=%s\n", marshalledDoc.Fields["id"].Value)
+		}
 	}
 	fmt.Println("\nUpdated User store contains:")
 	if l, e := userService.ListUsers(); e == nil {
