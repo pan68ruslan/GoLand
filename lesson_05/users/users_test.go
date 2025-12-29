@@ -6,9 +6,18 @@ import (
 	store "github.com/pan68ruslan/GoLand/lesson_05/documentstore"
 )
 
+var testStore = "TestDB"
+var testService = "Users"
+var testUser = "User0"
+var testId = "u0"
+
 func newTestService(t *testing.T) *Service {
-	s := store.NewStore("TestDB")
-	service, err := NewService("users", s)
+	s := store.NewStore("")
+	if s != nil && (s.Name != "Noname_Store" || s.Collections == nil) {
+		t.Fatal("failed to create the empty service")
+	}
+	s = store.NewStore(testStore)
+	service, err := NewService(testService, s)
 	if err != nil {
 		t.Fatalf("failed to create service: %v", err)
 	}
@@ -17,7 +26,7 @@ func newTestService(t *testing.T) *Service {
 
 func TestCreateUser(t *testing.T) {
 	service := newTestService(t)
-	u := User{ID: "u1", Name: "Ruslan"}
+	u := User{ID: testId, Name: testUser}
 	created, err := service.CreateUser(u)
 	if err != nil {
 		t.Fatalf("CreateUser failed: %v", err)
@@ -29,9 +38,9 @@ func TestCreateUser(t *testing.T) {
 
 func TestGetUser(t *testing.T) {
 	service := newTestService(t)
-	u := User{ID: "u2", Name: "Anna"}
+	u := User{ID: testId, Name: testUser}
 	_, _ = service.CreateUser(u)
-	got, err := service.GetUser("u2")
+	got, err := service.GetUser(testId)
 	if err != nil {
 		t.Fatalf("GetUser failed: %v", err)
 	}
@@ -46,12 +55,12 @@ func TestGetUser(t *testing.T) {
 
 func TestDeleteUser(t *testing.T) {
 	service := newTestService(t)
-	u := User{ID: "u3", Name: "Ivan"}
+	u := User{ID: testId, Name: testUser}
 	_, _ = service.CreateUser(u)
-	if err := service.DeleteUser("u3"); err != nil {
+	if err := service.DeleteUser(testId); err != nil {
 		t.Fatalf("DeleteUser failed: %v", err)
 	}
-	if err := service.DeleteUser("u3"); err == nil {
+	if err := service.DeleteUser(testId); err == nil {
 		t.Errorf("expected error when deleting non-existing user, got nil")
 	}
 }
@@ -65,8 +74,8 @@ func TestListUsers(t *testing.T) {
 	if len(users) != 0 {
 		t.Errorf("expected 0 users, got %d", len(users))
 	}
-	_, _ = service.CreateUser(User{ID: "u4", Name: "Petro"})
-	_, _ = service.CreateUser(User{ID: "u5", Name: "Oksana"})
+	_, _ = service.CreateUser(User{ID: "u1", Name: "User1"})
+	_, _ = service.CreateUser(User{ID: "u2", Name: "User2"})
 	users, err = service.ListUsers()
 	if err != nil {
 		t.Errorf("ListUsers returned error: %v", err)

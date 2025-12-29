@@ -4,16 +4,21 @@ import (
 	"testing"
 )
 
+var testStore = "TestDB"
+var testCollection = "Users"
+var testUser = "User0"
+var testId = "u0"
+
 func TestCreateCollection(t *testing.T) {
-	store := NewStore("TestDB")
-	col, err := store.CreateCollection("users", &CollectionConfig{PrimaryKey: "id"})
+	store := NewStore(testStore)
+	col, err := store.CreateCollection(testCollection, &CollectionConfig{PrimaryKey: "id"})
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
-	if col.Name != "users" {
-		t.Errorf("expected collection name 'users', got %s", col.Name)
+	if col.Name != testCollection {
+		t.Errorf("expected collection name '%s', got %s", testCollection, col.Name)
 	}
-	_, err = store.CreateCollection("users", &CollectionConfig{PrimaryKey: "id"})
+	_, err = store.CreateCollection(testCollection, &CollectionConfig{PrimaryKey: "id"})
 	if err == nil {
 		t.Errorf("expected error for duplicate collection, got nil")
 	}
@@ -24,14 +29,14 @@ func TestCreateCollection(t *testing.T) {
 }
 
 func TestGetCollection(t *testing.T) {
-	store := NewStore("TestDB")
-	_, _ = store.CreateCollection("users", &CollectionConfig{PrimaryKey: "id"})
-	col, err := store.GetCollection("users")
+	store := NewStore(testStore)
+	_, _ = store.CreateCollection(testCollection, &CollectionConfig{PrimaryKey: "id"})
+	col, err := store.GetCollection(testCollection)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
-	if col.Name != "users" {
-		t.Errorf("expected 'users', got %s", col.Name)
+	if col.Name != testCollection {
+		t.Errorf("expected '%s', got %s", testCollection, col.Name)
 	}
 	_, err = store.GetCollection("unknown")
 	if err == nil {
@@ -41,14 +46,14 @@ func TestGetCollection(t *testing.T) {
 
 func TestDeleteCollection(t *testing.T) {
 	store := NewStore("TestDB")
-	_, _ = store.CreateCollection("users", &CollectionConfig{PrimaryKey: "id"})
-	if err := store.DeleteCollection("users"); err != nil {
+	_, _ = store.CreateCollection(testCollection, &CollectionConfig{PrimaryKey: "id"})
+	if err := store.DeleteCollection(testCollection); err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
-	if _, ok := store.Collections["users"]; ok {
-		t.Errorf("expected collection 'users' to be deleted")
+	if _, ok := store.Collections[testCollection]; ok {
+		t.Errorf("expected collection '%s' to be deleted", testCollection)
 	}
-	if err := store.DeleteCollection("users"); err == nil {
+	if err := store.DeleteCollection(testCollection); err == nil {
 		t.Errorf("expected error for deleting non-existing collection, got nil")
 	}
 }

@@ -6,7 +6,7 @@ import (
 
 func newTestCollection() *Collection {
 	return &Collection{
-		Name:      "users",
+		Name:      testCollection,
 		Cfg:       &CollectionConfig{PrimaryKey: "id"},
 		Documents: make(map[string]Document),
 	}
@@ -16,19 +16,19 @@ func TestPutAndGet(t *testing.T) {
 	c := newTestCollection()
 	doc := Document{
 		Fields: map[string]DocumentField{
-			"id":   {Type: DocumentFieldTypeString, Value: "u1"},
-			"name": {Type: DocumentFieldTypeString, Value: "Ruslan"},
+			"id":   {Type: DocumentFieldTypeString, Value: testId},
+			"name": {Type: DocumentFieldTypeString, Value: testUser},
 		},
 	}
 	if err := c.Put(doc); err != nil {
 		t.Fatalf("Put failed: %v", err)
 	}
-	got, err := c.Get("u1")
+	got, err := c.Get(testId)
 	if err != nil {
 		t.Fatalf("Get failed: %v", err)
 	}
-	if got.Fields["name"].Value != "Ruslan" {
-		t.Errorf("expected name 'Ruslan', got %v", got.Fields["name"].Value)
+	if got.Fields["name"].Value != testUser {
+		t.Errorf("expected name '%s', got %v", testUser, got.Fields["name"].Value)
 	}
 	_, err = c.Get("unknown")
 	if err == nil {
@@ -40,7 +40,7 @@ func TestPutWrongKey(t *testing.T) {
 	c := newTestCollection()
 	doc := Document{
 		Fields: map[string]DocumentField{
-			"name": {Type: DocumentFieldTypeString, Value: "Ruslan"},
+			"name": {Type: DocumentFieldTypeString, Value: testUser},
 		},
 	}
 	if err := c.Put(doc); err == nil {
@@ -49,7 +49,7 @@ func TestPutWrongKey(t *testing.T) {
 	doc = Document{
 		Fields: map[string]DocumentField{
 			"id":   {Type: DocumentFieldTypeNumber, Value: 123},
-			"name": {Type: DocumentFieldTypeString, Value: "Ruslan"},
+			"name": {Type: DocumentFieldTypeString, Value: testUser},
 		},
 	}
 	if err := c.Put(doc); err == nil {
@@ -61,15 +61,15 @@ func TestDelete(t *testing.T) {
 	c := newTestCollection()
 	doc := Document{
 		Fields: map[string]DocumentField{
-			"id":   {Type: DocumentFieldTypeString, Value: "u2"},
-			"name": {Type: DocumentFieldTypeString, Value: "Anna"},
+			"id":   {Type: DocumentFieldTypeString, Value: testId},
+			"name": {Type: DocumentFieldTypeString, Value: testUser},
 		},
 	}
 	_ = c.Put(doc)
-	if e := c.Delete("u2"); e != nil {
+	if e := c.Delete(testId); e != nil {
 		t.Fatalf("Delete failed: %v", e)
 	}
-	if e := c.Delete("u2"); e == nil {
+	if e := c.Delete(testId); e == nil {
 		t.Errorf("expected error for deleting non-existing document, got nil")
 	}
 }
@@ -82,14 +82,14 @@ func TestList(t *testing.T) {
 	}
 	_ = c.Put(Document{
 		Fields: map[string]DocumentField{
-			"id":   {Type: DocumentFieldTypeString, Value: "u3"},
-			"name": {Type: DocumentFieldTypeString, Value: "Petro"},
+			"id":   {Type: DocumentFieldTypeString, Value: "u1"},
+			"name": {Type: DocumentFieldTypeString, Value: "User1"},
 		},
 	})
 	_ = c.Put(Document{
 		Fields: map[string]DocumentField{
-			"id":   {Type: DocumentFieldTypeString, Value: "u4"},
-			"name": {Type: DocumentFieldTypeString, Value: "Oksana"},
+			"id":   {Type: DocumentFieldTypeString, Value: "u2"},
+			"name": {Type: DocumentFieldTypeString, Value: "User2"},
 		},
 	})
 	docs, e := c.List()
