@@ -2,74 +2,76 @@ package users
 
 import (
 	"testing"
+
+	store "github.com/pan68ruslan/GoLand/lesson_05/documentstore"
 )
 
-func newTestService() *Service {
-	coll := &Collection{
-		Title: "Test",
-		Users: make(map[string]*User),
+func newTestService(t *testing.T) *Service {
+	s := store.NewStore("TestDB")
+	service, err := NewService("users", s)
+	if err != nil {
+		t.Fatalf("failed to create service: %v", err)
 	}
-	return &Service{coll: coll}
+	return service
 }
 
 func TestCreateUser(t *testing.T) {
-	svc := newTestService()
-	u, err := svc.CreateUser("u1", "Alice")
+	service := newTestService(t)
+	u := User{ID: "u1", Name: "Ruslan"}
+	created, err := service.CreateUser(u)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf("CreateUser failed: %v", err)
 	}
-	switch {
-	case u.ID != "u1" || u.Name != "Alice":
-		t.Fatalf("unexpected user data: %+v", u)
-	}
-	_, err = svc.CreateUser("u1", "Alice")
-	if err == nil {
-		t.Fatalf("expected error for duplicate user, got nil")
+	if created.ID != u.ID || created.Name != u.Name {
+		t.Errorf("expected %+v, got %+v", u, created)
 	}
 }
 
 func TestGetUser(t *testing.T) {
-	svc := newTestService()
-	svc.CreateUser("u1", "Alice")
-	u, err := svc.GetUser("u1")
+	service := newTestService(t)
+	u := User{ID: "u2", Name: "Anna"}
+	_, _ = service.CreateUser(u)
+	got, err := service.GetUser("u2")
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf("GetUser failed: %v", err)
 	}
-	if u.Name != "Alice" {
-		t.Fatalf("expected Alice, got %s", u.Name)
+	if got.ID != u.ID || got.Name != u.Name {
+		t.Errorf("expected %+v, got %+v", u, got)
 	}
-	_, err = svc.GetUser("u2")
+	_, err = service.GetUser("unknown")
 	if err == nil {
-		t.Fatalf("expected error for missing user, got nil")
-	}
-}
-
-func TestListUsers(t *testing.T) {
-	svc := newTestService()
-	svc.CreateUser("u1", "Alice")
-	svc.CreateUser("u2", "Bob")
-	list, err := svc.ListUsers()
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if len(list) != 2 {
-		t.Fatalf("expected 2 users, got %d", len(list))
+		t.Errorf("expected error for unknown user, got nil")
 	}
 }
 
 func TestDeleteUser(t *testing.T) {
-	svc := newTestService()
-	svc.CreateUser("u1", "Alice")
-	u, err := svc.GetUser("u1")
-	if u == nil || err != nil {
-		t.Fatalf("unexpected error for deleted user u1, %v", err)
+	service := newTestService(t)
+	u := User{ID: "u3", Name: "Ivan"}
+	_, _ = service.CreateUser(u)
+	if err := service.DeleteUser("u3"); err != nil {
+		t.Fatalf("DeleteUser failed: %v", err)
 	}
-	err = svc.DeleteUser("u2")
-	if err == nil {
-		t.Fatalf("expected error for existing user u2")
+	if err := service.DeleteUser("u3"); err == nil {
+		t.Errorf("expected error when deleting non-existing user, got nil")
 	}
-	err = svc.DeleteUser("u1")
+}
+
+func TestListUsers(t *testing.T) {
+	service := newTestService(t)
+	users, err := service.ListUsers()
 	if err != nil {
-		t.Fatalf("unexpected error for missing user u1, %v", err)
+		t.Errorf("expected no error for empty list, got %v", err)
+	}
+	if len(users) != 0 {
+		t.Errorf("expected 0 users, got %d", len(users))
+	}
+	_, _ = service.CreateUser(User{ID: "u4", Name: "Petro"})
+	_, _ = service.CreateUser(User{ID: "u5", Name: "Oksana"})
+	users, err = service.ListUsers()
+	if err != nil {
+		t.Errorf("ListUsers returned error: %v", err)
+	}
+	if len(users) != 2 {
+		t.Errorf("expected 2 users, got %d", len(users))
 	}
 }

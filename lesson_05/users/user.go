@@ -3,13 +3,18 @@ package users
 import (
 	"errors"
 	"fmt"
+
+	store "github.com/pan68ruslan/GoLand/lesson_05/documentstore"
 )
 
 var (
-	ErrUserIdIsEmpty     = errors.New("userId cannot be empty")
-	ErrNameIsEmpty       = errors.New("name cannot be empty")
-	ErrUserAlreadyExists = errors.New("user already exists")
-	ErrUserNotFound      = errors.New("user not found")
+	ErrCantCreateService     = errors.New("cannot create the user service")
+	ErrUserCreating          = errors.New("cannot add the user")
+	ErrUnmarshallingDocument = errors.New("cannot unmarshal the document")
+	ErrUserRemoving          = errors.New("cannot remove the user")
+	ErrUserNotFound          = errors.New("user not found")
+	ErrBrokenUser            = errors.New("user is broken or unknown")
+	ErrListingUsers          = errors.New("users listing error: ")
 )
 
 type User struct {
@@ -17,77 +22,61 @@ type User struct {
 	Name string `json:"name"`
 }
 
-type Collection struct {
-	Title string
-	Users map[string]*User
-}
-
 type Service struct {
-	coll *Collection
+	collection *store.Collection
 }
 
-func NewService(coll *Collection) *Service {
-	if coll.Users == nil {
-		coll.Users = make(map[string]*User)
+func NewService(name string, s *store.Store) (*Service, error) {
+	if col, e := s.CreateCollection(name, &store.CollectionConfig{PrimaryKey: "id"}); e == nil {
+		return &Service{collection: col}, nil
+	} else {
+		return nil, fmt.Errorf("%w: error: %v", ErrCantCreateService, e)
 	}
-	return &Service{coll: coll}
 }
 
-func (s *Service) CreateUser(id, name string) (*User, error) {
-	var errs []error
-	if id == "" {
-		errs = append(errs, ErrUserIdIsEmpty)
+func (s *Service) CreateUser(u User) (*User, error) {
+	if doc, e := store.MarshalStructureToDocument(u); e == nil {
+		s.collection.Documents[u.ID] = doc
+		return &u, nil
+	} else {
+		return nil, fmt.Errorf("%w, error %v: userId=%s, userName=%s", ErrUserCreating, e, u.ID, u.Name)
 	}
-	if name == "" {
-		errs = append(errs, ErrNameIsEmpty)
+}
+
+func (s *Service) GetUser(id string) (User, error) {
+	doc, e := s.collection.Get(id)
+	if e != nil {
+		return User{}, fmt.Errorf("%w, error %v: userId=%s", ErrUserNotFound, e, id)
 	}
-	if s.coll.Users == nil {
-		s.coll.Users = make(map[string]*User)
+	var u User
+	if e = store.UnmarshalDocumentToStructure(&doc, &u); e != nil {
+		return User{}, fmt.Errorf("%w, error %v: userId=%s", ErrUnmarshallingDocument, e, id)
 	}
-	if _, exists := s.coll.Users[id]; exists {
-		errs = append(errs, fmt.Errorf("%w: id=%s", ErrUserAlreadyExists, id))
-	}
-	if len(errs) > 0 {
-		return nil, errors.Join(errs...)
-	}
-	u := &User{
-		ID:   id,
-		Name: name,
-	}
-	s.coll.Users[id] = u
 	return u, nil
+}
+
+func (s *Service) DeleteUser(id string) error {
+	if e := s.collection.Delete(id); e != nil {
+		return fmt.Errorf("%w, error %v: userId=%s", ErrUserRemoving, e, id)
+	}
+	return nil
 }
 
 func (s *Service) ListUsers() ([]User, error) {
-	if s.coll.Users == nil {
-		return []User{}, nil
-	}
-	result := make([]User, 0, len(s.coll.Users))
-	for _, u := range s.coll.Users {
-		result = append(result, *u)
-	}
-	return result, nil
-}
-
-func (s *Service) GetUser(userId string) (*User, error) {
 	var errs []error
-	if userId == "" {
-		errs = append(errs, ErrUserIdIsEmpty)
+	var users []User
+	errs = append(errs, ErrListingUsers)
+	for _, doc := range s.collection.Documents {
+		var u User
+		e := store.UnmarshalDocumentToStructure(&doc, &u)
+		if e == nil {
+			users = append(users, u)
+		} else {
+			errs = append(errs, fmt.Errorf("%w, error=%v", ErrBrokenUser, e.Error()))
+		}
 	}
-	u, ok := s.coll.Users[userId]
-	if u == nil || !ok {
-		errs = append(errs, fmt.Errorf("%w: id=%s", ErrUserNotFound, userId))
-	}
-	if len(errs) > 0 {
+	if len(errs) > 1 {
 		return nil, errors.Join(errs...)
 	}
-	return u, nil
-}
-
-func (s *Service) DeleteUser(userId string) error {
-	u, e := s.GetUser(userId)
-	if u != nil && e == nil {
-		delete(s.coll.Users, userId)
-	}
-	return e
+	return users, nil
 }
