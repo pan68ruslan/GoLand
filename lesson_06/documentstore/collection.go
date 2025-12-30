@@ -57,7 +57,7 @@ func (c *Collection) MarshalJSON() ([]byte, error) {
 func (c *Collection) UnmarshalJSON(data []byte) error {
 	raw := make(map[string]json.RawMessage)
 	if err := json.Unmarshal(data, &raw); err != nil {
-		fmt.Println("[Collection]UnmarshalJSON() failed")
+		StoreLogger.Error("[Collection]UnmarshalJSON() failed")
 		return err
 	}
 	if v, ok := raw["Name"]; ok {
@@ -84,52 +84,52 @@ func (c *Collection) UnmarshalJSON(data []byte) error {
 
 func (c *Collection) Put(doc Document) {
 	if c.Cfg == nil || c.Cfg.PrimaryKey == "" {
-		fmt.Println("[Collection]CollectionConfig is not configured")
+		StoreLogger.Error("[Collection]CollectionConfig is not configured")
 		return
 	}
 	field, ok := doc.Fields[c.Cfg.PrimaryKey]
 	if !ok || field.Type != DocumentFieldTypeString {
-		fmt.Println("[Collection]Document is wrong")
+		StoreLogger.Error("[Collection]Document is wrong")
 		return
 	}
 	key, ok := field.Value.(string)
 	if !ok {
-		fmt.Println("[Collection]Key is not a string")
+		StoreLogger.Error("[Collection]Key is not a string")
 		return
 	}
-	fmt.Printf("[Collection]The document was added with key '%s'\n", key)
+	StoreLogger.Info(fmt.Sprintf("[Collection]The document was added with key '%s'", key))
 	c.Documents[key] = doc
 }
 
 func (c *Collection) Get(key string) (*Document, bool) {
 	doc, ok := c.Documents[key]
 	if !ok {
-		fmt.Printf("[Collection]The document with key '%s' wasn't found\n", key)
+		StoreLogger.Error(fmt.Sprintf("[Collection]The document with key '%s' wasn't found", key))
 		return nil, false
 	}
-	fmt.Printf("[Collection]The document with key '%s' was found\n", key)
+	StoreLogger.Info(fmt.Sprintf("[Collection]The document with key '%s' was found", key))
 	return &doc, true
 }
 
 func (c *Collection) Delete(key string) bool {
 	if _, ok := c.Documents[key]; ok {
-		fmt.Printf("[Collection]The document with key '%s' was deleted\n", key)
+		StoreLogger.Info(fmt.Sprintf("[Collection]The document with key '%s' was deleted", key))
 		delete(c.Documents, key)
 		return true
 	}
-	fmt.Printf("[Collection]The document with key '%s' doesn't exist\n", key)
+	StoreLogger.Error(fmt.Sprintf("[Collection]The document with key '%s' doesn't exist", key))
 	return false
 }
 
 func (c *Collection) List() []Document {
-	docs := make([]Document, 0)
+	docs := make([]Document, 0, len(c.Documents))
 	for _, doc := range c.Documents {
 		docs = append(docs, doc)
 	}
 	if l := len(docs); l < 1 {
-		fmt.Printf("[Collection]There are no documents in the collection '%s'\n", c.Name)
+		StoreLogger.Error(fmt.Sprintf("[Collection]There are no documents in the collection '%s'", c.Name))
 	} else {
-		fmt.Printf("[Collection]There are %d documents in the collection '%s'\n", l, c.Name)
+		StoreLogger.Info(fmt.Sprintf("[Collection]There are %d documents in the collection '%s'", l, c.Name))
 	}
 	return docs
 }

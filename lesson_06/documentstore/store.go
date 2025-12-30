@@ -2,12 +2,12 @@ package documentstore
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 )
 
-var ErrWrongStore = errors.New("wrong store, type")
+var StoreLogger = slog.New(slog.NewTextHandler(os.Stdout, nil))
 
 type Store struct {
 	Name        string
@@ -29,13 +29,13 @@ func NewStore(name string) *Store {
 
 func (s *Store) MarshalJSON() ([]byte, error) {
 	if s == nil {
-		return []byte("null"), fmt.Errorf("input collection isn't exists")
+		return []byte("null"), fmt.Errorf("[Store]Input collection isn't exists")
 	}
 	out := make(map[string]json.RawMessage)
 	for key, coll := range s.Collections {
 		data, err := json.Marshal(coll)
 		if err != nil {
-			return nil, fmt.Errorf("marshal collection %s: %w", key, err)
+			return nil, fmt.Errorf("[Store]Marshal collection %s: %w", key, err)
 		}
 		out[key] = data
 	}
@@ -50,21 +50,21 @@ func (s *Store) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &raw); err != nil {
 		return err
 	}
-	if v, ok := raw["Collections"]; ok { // узгоджено з тегом
+	if v, ok := raw["Collections"]; ok {
 		colls := make(map[string]json.RawMessage)
 		if err := json.Unmarshal(v, &colls); err != nil {
 			return err
 		}
 		if v, ok := raw["Name"]; ok {
 			if err := json.Unmarshal(v, &s.Name); err != nil {
-				return fmt.Errorf("unmarshal Name: %w", err)
+				return fmt.Errorf("[Store]Unmarshal Name: %w", err)
 			}
 		}
 		s.Collections = make(map[string]*Collection)
 		for key, collData := range colls {
 			var coll Collection
 			if err := json.Unmarshal(collData, &coll); err != nil {
-				return fmt.Errorf("unmarshal Collections %s: %w", key, err)
+				return fmt.Errorf("[Store]Unmarshal Collections %s: %w", key, err)
 			}
 			s.Collections[key] = &coll
 		}
@@ -76,7 +76,7 @@ func (s *Store) UnmarshalJSON(data []byte) error {
 
 func (s *Store) CreateCollection(name string, cfg *CollectionConfig) (bool, *Collection) {
 	if _, ok := s.Collections[name]; ok {
-		fmt.Printf("[Store]The collection '%s' already exists\n", name)
+		StoreLogger.Error(fmt.Sprintf("[Store]The collection '%s' already exists", name))
 		return false, nil
 	}
 	col := &Collection{
@@ -85,57 +85,57 @@ func (s *Store) CreateCollection(name string, cfg *CollectionConfig) (bool, *Col
 		Documents: make(map[string]Document),
 	}
 	s.Collections[name] = col
-	fmt.Printf("[Store]The collection '%s' was created\n", name)
+	StoreLogger.Info(fmt.Sprintf("[Store]The collection '%s' was created", name))
 	return true, col
 }
 
 func (s *Store) GetCollection(name string) (*Collection, bool) {
 	if col, ok := s.Collections[name]; ok {
-		fmt.Printf("[Store]The collection '%s' was found\n", name)
+		StoreLogger.Info(fmt.Sprintf("[Store]The collection '%s' was found", name))
 		return col, true
 	}
-	fmt.Printf("[Store]The collection '%s' was not found\n", name)
+	StoreLogger.Error(fmt.Sprintf("[Store]The collection '%s' was not found", name))
 	return nil, false
 }
 
 func (s *Store) DeleteCollection(name string) bool {
 	if _, ok := s.Collections[name]; ok {
-		fmt.Printf("[Store]The collection '%s' has been deleted\n", name)
+		StoreLogger.Info(fmt.Sprintf("[Store]The collection '%s' has been deleted", name))
 		delete(s.Collections, name)
 		return true
 	}
-	fmt.Printf("[Store]The collection '%s' doesn't exist\n", name)
+	StoreLogger.Error(fmt.Sprintf("[Store]The collection '%s' doesn't exist", name))
 	return false
 }
 
 func (s *Store) Dump() ([]byte, error) {
 	if s == nil {
-		return nil, fmt.Errorf("store is nil")
+		return nil, fmt.Errorf("[Store]The store is nil")
 	}
 	return json.MarshalIndent(s, "", "  ")
 }
 
 func (s *Store) DumpToFile(filename string) error {
 	if s == nil {
-		return fmt.Errorf("store is nil")
+		return fmt.Errorf("[Store]The store is nil")
 	}
 	data, err := json.MarshalIndent(s, "", "  ")
 	if err != nil {
-		return fmt.Errorf("cannot marshal store: %w", err)
+		return fmt.Errorf("[Store] Cannot marshal store: %w", err)
 	}
 	if err := os.WriteFile(filename, data, 0644); err != nil {
-		return fmt.Errorf("cannot write file: %w", err)
+		return fmt.Errorf("[Store] Cannot write file: %w", err)
 	}
 	return nil
 }
 
 func NewStoreFromDump(dump []byte) (*Store, error) {
 	if len(dump) == 0 {
-		return nil, fmt.Errorf("empty dump")
+		return nil, fmt.Errorf("[Store]The dump is empty")
 	}
 	var store Store
 	if err := json.Unmarshal(dump, &store); err != nil {
-		return nil, fmt.Errorf("cannot unmarshal store: %w", err)
+		return nil, fmt.Errorf("[Store]Cannot unmarshal store: %w", err)
 	}
 	if store.Collections == nil {
 		store.Collections = make(map[string]*Collection)
@@ -146,11 +146,11 @@ func NewStoreFromDump(dump []byte) (*Store, error) {
 func NewStoreFromFile(filename string) (*Store, error) {
 	data, err := os.ReadFile(filename)
 	if err != nil {
-		return nil, fmt.Errorf("cannot read file: %w", err)
+		return nil, fmt.Errorf("[Store]Cannot read file: %w", err)
 	}
 	var store Store
 	if err := json.Unmarshal(data, &store); err != nil {
-		return nil, fmt.Errorf("cannot unmarshal store: %w", err)
+		return nil, fmt.Errorf("[Store]Cannot unmarshal store: %w", err)
 	}
 	if store.Collections == nil {
 		store.Collections = make(map[string]*Collection)

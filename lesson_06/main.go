@@ -1,29 +1,25 @@
 package main
 
 import (
-	"log/slog"
-	"os"
-
 	ds "github.com/pan68ruslan/GoLand/lesson_06/documentstore"
 )
 
 func main() {
-	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	initialStore := ds.NewStore("InitialStore")
 	cfg := &ds.CollectionConfig{
 		PrimaryKey: "key",
 	}
 	if cfg == nil {
-		logger.Error("Initializing CollectionConfig failed", "PrimaryKey", cfg.PrimaryKey)
+		ds.StoreLogger.Error("Initializing CollectionConfig failed", "PrimaryKey", cfg.PrimaryKey)
 	} else {
-		logger.Info("The CollectionConfig initialized successfully", "PrimaryKey", cfg.PrimaryKey)
+		ds.StoreLogger.Info("The CollectionConfig initialized successfully", "PrimaryKey", cfg.PrimaryKey)
 	}
 	collectionName := "DocumentCollection"
 	ok, collection := initialStore.CreateCollection(collectionName, cfg)
 	if ok {
-		logger.Info("The empty collection was created in the store", "Name", collectionName)
+		ds.StoreLogger.Info("The empty collection was created in the store", "Name", collectionName)
 	} else {
-		logger.Error("Collection failed to be created in the store", "Name", collectionName)
+		ds.StoreLogger.Error("Collection failed to be created in the store", "Name", collectionName)
 	}
 	collection.Put(ds.Document{
 		Fields: map[string]ds.DocumentField{
@@ -41,32 +37,38 @@ func main() {
 			"pages":      {Type: ds.DocumentFieldTypeNumber, Value: 100},
 		},
 	})
-	logger.Info("The documents were added to the collection", "Amount", len(collection.Documents), "Name", initialStore.Name)
-	jsonDoc, e := initialStore.Dump()
+	ds.StoreLogger.Info("The documents were added to the collection", "Amount", len(collection.Documents), "Name", initialStore.Name)
+	dumpDoc, e := initialStore.Dump()
 	if e == nil {
-		logger.Info("The store dump was created:", "Name", initialStore.Name)
-		logger.Debug(string(jsonDoc))
+		ds.StoreLogger.Info("The store dump was created", "Name", initialStore.Name)
+		ds.StoreLogger.Debug(string(dumpDoc))
 	} else {
-		logger.Error("The store dump was not created:", "Name", initialStore.Name, "Error", e)
+		ds.StoreLogger.Error("The store dump was not created", "Name", initialStore.Name, "Error", e)
 	}
-	restoredStore, e := ds.NewStoreFromDump(jsonDoc)
+	restoredStore, e := ds.NewStoreFromDump(dumpDoc)
 	if e == nil {
-		logger.Info("The initial store was restored\n", "Name", restoredStore.Name)
+		ds.StoreLogger.Info("The initial store was restored from dump", "Name", restoredStore.Name)
 	} else {
-		logger.Error("The initial store wasn't restored", "Name", restoredStore.Name, "Error", e)
+		ds.StoreLogger.Error("The initial store wasn't restored from dump", "Error", e)
 	}
-	if e = initialStore.DumpToFile(initialStore.Name); e != nil {
-		logger.Error("The store wasn't restored", "Name", initialStore.Name, "Error", e)
-	}
-	if e = restoredStore.DumpToFile(restoredStore.Name + "Restored"); e != nil {
-		logger.Error("The store wasn't restored", "Name", restoredStore.Name, "Error", e)
-	}
-	fromFileStore, e := ds.NewStoreFromFile(initialStore.Name)
-	fileStore, e := fromFileStore.Dump()
-	if e == nil {
-		logger.Info("The store was created from the dump file:", "Name", initialStore.Name)
-		logger.Debug(string(fileStore))
+	if e = initialStore.DumpToFile(initialStore.Name); e == nil {
+		ds.StoreLogger.Info("The store dump to file was created", "NameOfFile", initialStore.Name)
 	} else {
-		logger.Error("The store wasn't restored", "Name", initialStore.Name, "Error", e)
+		ds.StoreLogger.Error("The store dump to file wasn't created", "NameOfFile", initialStore.Name, "Error", e)
+	}
+	if e = restoredStore.DumpToFile(restoredStore.Name + "Restored"); e == nil {
+		ds.StoreLogger.Info("The dump of the restored store was created", "NameOfFile", restoredStore.Name)
+	} else {
+		ds.StoreLogger.Error("The dump of the restored store wasn't created", "NameOfFile", restoredStore.Name, "Error", e)
+	}
+	if fromFileStore, e := ds.NewStoreFromFile(initialStore.Name); e == nil {
+		if fileStore, e := fromFileStore.Dump(); e == nil {
+			ds.StoreLogger.Info("The dump of restored from the dump file store was created", "Name", initialStore.Name)
+			ds.StoreLogger.Debug(string(fileStore))
+		} else {
+			ds.StoreLogger.Error("The store wasn't restored", "Name", initialStore.Name, "Error", e)
+		}
+	} else {
+		ds.StoreLogger.Error("The dump of restored from the dump file store wasn't created ", "Name", initialStore.Name, "Error", e)
 	}
 }

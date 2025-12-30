@@ -3,7 +3,6 @@ package documentstore
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 )
 
 var (
@@ -31,7 +30,7 @@ type Document struct {
 	Fields map[string]DocumentField `json:"-"`
 }
 
-func (d Document) MarshalJSON() ([]byte, error) {
+func (d *Document) MarshalJSON() ([]byte, error) {
 	out := make(map[string]map[string]interface{})
 	for key, field := range d.Fields {
 		out[key] = map[string]interface{}{
@@ -54,55 +53,9 @@ func (d *Document) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-/*func (d Document) UnmarshalJSON(data []byte) error {
-	raw := make(map[string]map[string]interface{})
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return err
-	}
-	fields := make(map[string]DocumentField)
-	for key, val := range raw {
-		t, ok := val["type"].(string)
-		if !ok {
-			return fmt.Errorf("%w: missing type for field %s", ErrWrongFieldType, key)
-		}
-		dfType := DocumentFieldType(t)
-		value := val["value"]
-		switch dfType {
-		case DocumentFieldTypeString:
-			if _, ok := value.(string); !ok {
-				return fmt.Errorf("%w: expected string for %s", ErrWrongFieldType, key)
-			}
-		case DocumentFieldTypeNumber:
-			if _, ok := value.(float64); !ok {
-				return fmt.Errorf("%w: expected number for %s", ErrWrongFieldType, key)
-			}
-		case DocumentFieldTypeBool:
-			if _, ok := value.(bool); !ok {
-				return fmt.Errorf("%w: expected bool for %s", ErrWrongFieldType, key)
-			}
-		case DocumentFieldTypeArray:
-			if _, ok := value.([]interface{}); !ok {
-				return fmt.Errorf("%w: expected array for %s", ErrWrongFieldType, key)
-			}
-		case DocumentFieldTypeObject:
-			if _, ok := value.(map[string]interface{}); !ok {
-				return fmt.Errorf("%w: expected object for %s", ErrWrongFieldType, key)
-			}
-		default:
-			return fmt.Errorf("%w: %s", ErrUnsupportedType, dfType)
-		}
-		fields[key] = DocumentField{
-			Type:  dfType,
-			Value: value,
-		}
-	}
-	d.Fields = fields
-	return nil
-}*/
-
-func SafetySerialize(v interface{}) ([]byte, error) {
+/*func SafetySerialize(v interface{}) ([]byte, error) {
 	if doc, ok := v.(Document); ok {
 		return json.Marshal(doc)
 	}
 	return nil, fmt.Errorf("%w: expected Document, got %T", ErrWrongDocument, v)
-}
+}*/
