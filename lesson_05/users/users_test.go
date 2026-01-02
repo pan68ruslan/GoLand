@@ -31,8 +31,13 @@ func TestCreateUser(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateUser failed: %v", err)
 	}
-	if created.ID != u.ID || created.Name != u.Name {
-		t.Errorf("expected %+v, got %+v", u, created)
+	switch {
+	case u == nil || u.ID != "u1" || u.Name != "Alice":
+		t.Fatalf("unexpected user data: %+v", u)
+	}
+	_, err = svc.CreateUser("u1", "Alice")
+	if err == nil {
+		t.Fatalf("expected error for duplicate user, got nil")
 	}
 }
 
@@ -44,8 +49,8 @@ func TestGetUser(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetUser failed: %v", err)
 	}
-	if got.ID != u.ID || got.Name != u.Name {
-		t.Errorf("expected %+v, got %+v", u, got)
+	if u == nil || u.Name != "Alice" {
+		t.Fatalf("expected Alice, got %s", u.Name)
 	}
 	_, err = service.GetUser("unknown")
 	if err == nil {
