@@ -10,6 +10,7 @@ import (
 var (
 	ErrCantCreateService     = errors.New("cannot create the user service")
 	ErrUserCreating          = errors.New("cannot add the user")
+	ErrUserAlreadyExists     = errors.New("user already exists")
 	ErrUnmarshallingDocument = errors.New("cannot unmarshal the document")
 	ErrUserRemoving          = errors.New("cannot remove the user")
 	ErrUserNotFound          = errors.New("user not found")
@@ -35,6 +36,9 @@ func NewService(name string, s *store.Store) (*Service, error) {
 }
 
 func (s *Service) CreateUser(u User) (*User, error) {
+	if d, _ := s.GetUser(u.ID); d.ID == u.ID {
+		return nil, fmt.Errorf("%w: found userId=%s, userName=%s", ErrUserAlreadyExists, u.ID, u.Name)
+	}
 	if doc, e := store.MarshalStructureToDocument(u); e == nil {
 		s.collection.Documents[u.ID] = doc
 		return &u, nil

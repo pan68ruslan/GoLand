@@ -26,35 +26,32 @@ func newTestService(t *testing.T) *Service {
 
 func TestCreateUser(t *testing.T) {
 	service := newTestService(t)
-	u := User{ID: testId, Name: testUser}
-	created, err := service.CreateUser(u)
+	created, err := service.CreateUser(User{ID: testId, Name: testUser})
 	if err != nil {
 		t.Fatalf("CreateUser failed: %v", err)
 	}
-	switch {
-	case u == nil || u.ID != "u1" || u.Name != "Alice":
-		t.Fatalf("unexpected user data: %+v", u)
+	if created.ID != testId || created.Name != testUser {
+		t.Fatalf("Unexpected user data: %+v", created)
 	}
-	_, err = svc.CreateUser("u1", "Alice")
+	_, err = service.CreateUser(User{ID: testId, Name: testUser})
 	if err == nil {
-		t.Fatalf("expected error for duplicate user, got nil")
+		t.Fatalf("Expected error for duplicate user, got nil")
 	}
 }
 
 func TestGetUser(t *testing.T) {
 	service := newTestService(t)
-	u := User{ID: testId, Name: testUser}
-	_, _ = service.CreateUser(u)
+	_, _ = service.CreateUser(User{ID: testId, Name: testUser})
 	got, err := service.GetUser(testId)
 	if err != nil {
 		t.Fatalf("GetUser failed: %v", err)
 	}
-	if u == nil || u.Name != "Alice" {
-		t.Fatalf("expected Alice, got %s", u.Name)
+	if got.ID != testId || got.Name != testUser {
+		t.Fatalf("Expected Alice, got %+v", got)
 	}
 	_, err = service.GetUser("unknown")
 	if err == nil {
-		t.Errorf("expected error for unknown user, got nil")
+		t.Errorf("Expected error for unknown user, got nil")
 	}
 }
 
