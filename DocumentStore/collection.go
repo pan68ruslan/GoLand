@@ -5,7 +5,18 @@ import "fmt"
 type Collection struct {
 	Name      string
 	Cfg       *CollectionConfig
-	Documents map[string]Document
+	documents map[string]Document
+}
+
+func NewCollection(name string, cfg *CollectionConfig) (*Collection, error) {
+	if cfg == nil || cfg.PrimaryKey == "" {
+		return nil, fmt.Errorf("[Collection]CollectionConfig is not configured")
+	}
+	return &Collection{
+		Name:      name,
+		Cfg:       cfg,
+		documents: make(map[string]Document),
+	}, nil
 }
 
 type CollectionConfig struct {
@@ -13,6 +24,10 @@ type CollectionConfig struct {
 }
 
 func (s *Collection) Put(doc Document) {
+	if s.Cfg == nil || s.Cfg.PrimaryKey == "" {
+		fmt.Println("[Collection]CollectionConfig is not configured")
+		return
+	}
 	field, ok := doc.Fields[s.Cfg.PrimaryKey]
 	if !ok || field.Type != DocumentFieldTypeString {
 		fmt.Println("[Collection]PrimaryKey is wrong or absent")
@@ -24,11 +39,11 @@ func (s *Collection) Put(doc Document) {
 		return
 	}
 	fmt.Printf("[Collection]The document was added with key '%s'\n", key)
-	s.Documents[key] = doc
+	s.documents[key] = doc
 }
 
 func (s *Collection) Get(key string) (*Document, bool) {
-	doc, ok := s.Documents[key]
+	doc, ok := s.documents[key]
 	if !ok {
 		fmt.Printf("[Collection]The document with key '%s' wasn't found\n", key)
 		return nil, false
@@ -38,9 +53,9 @@ func (s *Collection) Get(key string) (*Document, bool) {
 }
 
 func (s *Collection) Delete(key string) bool {
-	if _, ok := s.Documents[key]; ok {
+	if _, ok := s.documents[key]; ok {
 		fmt.Printf("[Collection]The document with key '%s' was deleted\n", key)
-		delete(s.Documents, key)
+		delete(s.documents, key)
 		return true
 	}
 	fmt.Printf("[Collection]The document with key '%s' doesn't exist\n", key)
@@ -49,16 +64,13 @@ func (s *Collection) Delete(key string) bool {
 
 func (s *Collection) List() []Document {
 	docs := make([]Document, 0)
-	for _, doc := range s.Documents {
+	for _, doc := range s.documents {
 		docs = append(docs, doc)
 	}
 	if l := len(docs); l < 1 {
 		fmt.Printf("[Collection]There are no documents in the collection '%s'\n", s.Name)
 	} else {
 		fmt.Printf("[Collection]There are %d documents in the collection '%s'\n", l, s.Name)
-		for i, doc := range docs {
-			fmt.Printf("[Collection] %d. %s\n", i+1, doc.Fields["title"].Value)
-		}
 	}
 	return docs
 }

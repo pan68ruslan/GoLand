@@ -8,15 +8,18 @@ import (
 
 func main() {
 	store := DocumentStore.NewStore()
-	cfg := &DocumentStore.CollectionConfig{
-		PrimaryKey: "key",
-	}
 	fmt.Println("Store was created")
 	collectionName := "docCollection"
-	fmt.Printf("\nCreate the collection '%s'\n", collectionName)
+	if ok, _ := store.CreateCollection(collectionName, nil); ok {
+		fmt.Printf("Collection '%s' created\n", collectionName)
+	}
 	if _, ok := store.GetCollection(collectionName); ok {
 		fmt.Printf("Found the collection '%s'\n", collectionName)
 	}
+	cfg := &DocumentStore.CollectionConfig{
+		PrimaryKey: "key",
+	}
+	fmt.Printf("\nCreate the collection '%s'\n", collectionName)
 	if ok, _ := store.CreateCollection(collectionName, cfg); ok {
 		fmt.Printf("Collection '%s' created\n", collectionName)
 	}
