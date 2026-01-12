@@ -2,7 +2,8 @@ package main
 
 import (
 	"fmt"
-	lru "lesson_08/lru"
+
+	lru "github.com/pan68ruslan/GoLand/lesson_08/lru"
 )
 
 func main() {
@@ -12,11 +13,11 @@ func main() {
 	cache.Put("B", "Banana")
 	cache.Put("C", "Cherry")
 
-	fmt.Println(cache.Get("A")) // Apple, true
+	fmt.Println(cache.Get("A"))
 
-	cache.Put("D", "Date") // витіснить найстаріший
+	cache.Put("D", "Date")
 
-	fmt.Println(cache.Get("B")) // "", false (видалений)
-	fmt.Println(cache.Get("C")) // Cherry, true (ще є)
-	fmt.Println(cache.Get("D")) // Date, true
+	fmt.Println(cache.Get("B"))
+	fmt.Println(cache.Get("C"))
+	fmt.Println(cache.Get("D"))
 }
