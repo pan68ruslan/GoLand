@@ -1,7 +1,7 @@
 package main
 
 import (
-	ds "github.com/pan68ruslan/GoLand/lesson_06/documentstore"
+	ds "lesson_06/documentstore"
 )
 
 func main() {

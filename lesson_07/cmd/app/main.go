@@ -4,7 +4,7 @@ import (
 	"log/slog"
 	"os"
 
-	ds "github.com/pan68ruslan/GoLand/lesson_07/internal/document_store"
+	ds "lesson_07/internal/document_store"
 )
 
 func main() {
