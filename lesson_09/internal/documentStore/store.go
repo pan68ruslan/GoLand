@@ -1,20 +1,19 @@
-package document_store
+package documentStore
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 )
-
-var ErrWrongStore = errors.New("wrong store, type")
 
 type Store struct {
 	Name        string
 	Collections map[string]*Collection `json:"Collections"`
+	Logger      *slog.Logger
 }
 
-func NewStore(name string) *Store {
+func NewStore(name string, logger *slog.Logger) *Store {
 	var nm string
 	if name != "" {
 		nm = name
@@ -24,57 +23,42 @@ func NewStore(name string) *Store {
 	return &Store{
 		Name:        nm,
 		Collections: make(map[string]*Collection),
+		Logger:      logger,
 	}
+}
+
+func (s *Store) AddCollection(name string, cfg *CollectionConfig) {
+	s.Collections[name] = NewCollection(name, cfg, s.Logger)
+	s.Logger.Info("Added collection",
+		slog.String("store", s.Name),
+		slog.String("collection", name))
 }
 
 func (s *Store) MarshalJSON() ([]byte, error) {
 	if s == nil {
-		return []byte("null"), fmt.Errorf("input collection isn't exists")
+		return []byte("null"), nil
 	}
-	out := make(map[string]json.RawMessage)
-	for key, coll := range s.Collections {
-		data, err := json.Marshal(coll)
-		if err != nil {
-			return nil, fmt.Errorf("marshal collection %s: %w", key, err)
-		}
-		out[key] = data
-	}
-	return json.Marshal(map[string]interface{}{
+	fields := map[string]interface{}{
 		"Name":        s.Name,
-		"Collections": out,
-	})
+		"Collections": s.Collections,
+	}
+	return json.Marshal(fields)
 }
 
 func (s *Store) UnmarshalJSON(data []byte) error {
-	raw := make(map[string]json.RawMessage)
-	if err := json.Unmarshal(data, &raw); err != nil {
+	var out struct {
+		Name        string                 `json:"Name"`
+		Collections map[string]*Collection `json:"Collections"`
+	}
+	if err := json.Unmarshal(data, &out); err != nil {
 		return err
 	}
-	if v, ok := raw["Collections"]; ok { // узгоджено з тегом
-		colls := make(map[string]json.RawMessage)
-		if err := json.Unmarshal(v, &colls); err != nil {
-			return err
-		}
-		if v, ok := raw["Name"]; ok {
-			if err := json.Unmarshal(v, &s.Name); err != nil {
-				return fmt.Errorf("unmarshal Name: %w", err)
-			}
-		}
-		s.Collections = make(map[string]*Collection)
-		for key, collData := range colls {
-			var coll Collection
-			if err := json.Unmarshal(collData, &coll); err != nil {
-				return fmt.Errorf("unmarshal Collections %s: %w", key, err)
-			}
-			s.Collections[key] = &coll
-		}
-	} else {
-		s.Collections = make(map[string]*Collection)
-	}
+	s.Name = out.Name
+	s.Collections = out.Collections
 	return nil
 }
 
-func (s *Store) CreateCollection(name string, cfg *CollectionConfig) (bool, *Collection) {
+func (s *Store) CreateCollection(name string, cfg *CollectionConfig, logger *slog.Logger) (bool, *Collection) {
 	if _, ok := s.Collections[name]; ok {
 		fmt.Printf("[Store]The collection '%s' already exists\n", name)
 		return false, nil
@@ -83,6 +67,7 @@ func (s *Store) CreateCollection(name string, cfg *CollectionConfig) (bool, *Col
 		Name:      name,
 		Cfg:       cfg,
 		Documents: make(map[string]Document),
+		Logger:    logger,
 	}
 	s.Collections[name] = col
 	fmt.Printf("[Store]The collection '%s' was created\n", name)
@@ -116,10 +101,7 @@ func (s *Store) Dump() ([]byte, error) {
 }
 
 func (s *Store) DumpToFile(filename string) error {
-	if s == nil {
-		return fmt.Errorf("store is nil")
-	}
-	data, err := json.MarshalIndent(s, "", "  ")
+	data, err := s.Dump()
 	if err != nil {
 		return fmt.Errorf("cannot marshal store: %w", err)
 	}
@@ -140,6 +122,7 @@ func NewStoreFromDump(dump []byte) (*Store, error) {
 	if store.Collections == nil {
 		store.Collections = make(map[string]*Collection)
 	}
+	store.Name += "Restored"
 	return &store, nil
 }
 
@@ -148,12 +131,5 @@ func NewStoreFromFile(filename string) (*Store, error) {
 	if err != nil {
 		return nil, fmt.Errorf("cannot read file: %w", err)
 	}
-	var store Store
-	if err := json.Unmarshal(data, &store); err != nil {
-		return nil, fmt.Errorf("cannot unmarshal store: %w", err)
-	}
-	if store.Collections == nil {
-		store.Collections = make(map[string]*Collection)
-	}
-	return &store, nil
+	return NewStoreFromDump(data)
 }

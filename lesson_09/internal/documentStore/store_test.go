@@ -1,16 +1,19 @@
-package document_store
+package documentStore
 
 import (
+	"log/slog"
 	"os"
 	"testing"
 )
+
+var logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
 
 func newCfg() *CollectionConfig {
 	return &CollectionConfig{PrimaryKey: "key"}
 }
 
 func TestNewStore(t *testing.T) {
-	s := NewStore("MyStore")
+	s := NewStore("MyStore", logger)
 	if s.Name != "MyStore" {
 		t.Errorf("expected Name 'MyStore', got %s", s.Name)
 	}
@@ -20,15 +23,15 @@ func TestNewStore(t *testing.T) {
 }
 
 func TestCreateGetDeleteCollection(t *testing.T) {
-	s := NewStore("TestStore")
-	ok, coll := s.CreateCollection("Coll1", newCfg())
+	s := NewStore("TestStore", logger)
+	ok, coll := s.CreateCollection("Coll1", newCfg(), logger)
 	if !ok || coll == nil {
 		t.Fatalf("expected collection created")
 	}
 	if _, exists := s.Collections["Coll1"]; !exists {
 		t.Errorf("collection not stored in map")
 	}
-	ok, _ = s.CreateCollection("Coll1", newCfg())
+	ok, _ = s.CreateCollection("Coll1", newCfg(), logger)
 	if ok {
 		t.Errorf("expected duplicate create to fail")
 	}
@@ -48,8 +51,8 @@ func TestCreateGetDeleteCollection(t *testing.T) {
 }
 
 func TestMarshalUnmarshalStore(t *testing.T) {
-	s := NewStore("MarshalStore")
-	s.CreateCollection("Coll1", newCfg())
+	s := NewStore("MarshalStore", logger)
+	s.CreateCollection("Coll1", newCfg(), logger)
 	data, err := s.MarshalJSON()
 	if err != nil {
 		t.Fatalf("marshal failed: %v", err)
@@ -67,8 +70,8 @@ func TestMarshalUnmarshalStore(t *testing.T) {
 }
 
 func TestDumpAndNewStoreFromDump(t *testing.T) {
-	s := NewStore("DumpStore")
-	s.CreateCollection("Coll1", newCfg())
+	s := NewStore("DumpStore", logger)
+	s.CreateCollection("Coll1", newCfg(), logger)
 	data, err := s.Dump()
 	if err != nil {
 		t.Fatalf("dump failed: %v", err)
@@ -77,7 +80,7 @@ func TestDumpAndNewStoreFromDump(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewStoreFromDump failed: %v", err)
 	}
-	if s2.Name != "DumpStore" {
+	if s2.Name != s.Name+"Restored" {
 		t.Errorf("expected Name 'DumpStore', got %s", s2.Name)
 	}
 	if len(s2.Collections) != 1 {
@@ -86,8 +89,8 @@ func TestDumpAndNewStoreFromDump(t *testing.T) {
 }
 
 func TestDumpToFileAndNewStoreFromFile(t *testing.T) {
-	s := NewStore("FileStore")
-	s.CreateCollection("Coll1", newCfg())
+	s := NewStore("FileStore", logger)
+	s.CreateCollection("Coll1", newCfg(), logger)
 	tmpfile := "test_store.json"
 	defer os.Remove(tmpfile)
 	if err := s.DumpToFile(tmpfile); err != nil {
@@ -97,7 +100,7 @@ func TestDumpToFileAndNewStoreFromFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewStoreFromFile failed: %v", err)
 	}
-	if s2.Name != "FileStore" {
+	if s2.Name != s.Name+"Restored" {
 		t.Errorf("expected Name 'FileStore', got %s", s2.Name)
 	}
 	if len(s2.Collections) != 1 {

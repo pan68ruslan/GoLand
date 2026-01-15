@@ -1,72 +1,109 @@
 package main
 
 import (
+	"fmt"
 	"log/slog"
 	"os"
 
-	ds "lesson_09/internal/document_store"
+	ds "lesson_09/internal/documentStore"
 )
 
 func main() {
-	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	var initialStore = ds.NewStore("InitialStore")
-	cfg := &ds.CollectionConfig{
-		PrimaryKey: "key",
-	}
-	if cfg == nil {
-		logger.Error("Initializing CollectionConfig failed", "PrimaryKey", cfg.PrimaryKey)
-	} else {
-		logger.Info("The CollectionConfig initialized successfully", "PrimaryKey", cfg.PrimaryKey)
-	}
-	collectionName := "DocumentCollection"
-	ok, collection := initialStore.CreateCollection(collectionName, cfg)
-	if ok {
-		logger.Info("The empty collection was created in the store", "Name", collectionName)
-	} else {
-		logger.Error("Collection failed to be created in the store", "Name", collectionName)
-	}
-	collection.Put(ds.Document{
-		Fields: map[string]ds.DocumentField{
-			"key":        {Type: ds.DocumentFieldTypeString, Value: "doc1"},
-			"title":      {Type: ds.DocumentFieldTypeString, Value: "firstDocument"},
-			"isApproved": {Type: ds.DocumentFieldTypeBool, Value: false},
-			"pages":      {Type: ds.DocumentFieldTypeNumber, Value: 42},
-		},
+	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
+	store := ds.NewStore("InitialStore", logger)
+	store.AddCollection("users", &ds.CollectionConfig{
+		PrimaryKey:    "id",
+		IndexedFields: []string{"id", "name"},
 	})
-	collection.Put(ds.Document{
+	users := store.Collections["users"]
+	doc1 := ds.Document{
 		Fields: map[string]ds.DocumentField{
-			"key":        {Type: ds.DocumentFieldTypeString, Value: "doc2"},
-			"title":      {Type: ds.DocumentFieldTypeString, Value: "secondDocument"},
-			"isApproved": {Type: ds.DocumentFieldTypeBool, Value: true},
-			"pages":      {Type: ds.DocumentFieldTypeNumber, Value: 100},
+			"id":    {Type: ds.DocumentFieldTypeString, Value: "u1"},
+			"name":  {Type: ds.DocumentFieldTypeString, Value: "Alice"},
+			"email": {Type: ds.DocumentFieldTypeString, Value: "alice@mail.com"},
+			"role":  {Type: ds.DocumentFieldTypeString, Value: "guest"},
 		},
-	})
-	logger.Info("The documents were added to the collection", "Amount", len(collection.Documents), "Name", initialStore.Name)
-	jsonDoc, e := initialStore.Dump()
-	if e == nil {
-		logger.Info("The store dump was created:", "Name", initialStore.Name)
+	}
+	doc2 := ds.Document{
+		Fields: map[string]ds.DocumentField{
+			"id":    {Type: ds.DocumentFieldTypeString, Value: "u2"},
+			"name":  {Type: ds.DocumentFieldTypeString, Value: "Bob"},
+			"email": {Type: ds.DocumentFieldTypeString, Value: "bob@mail.com"},
+			"role":  {Type: ds.DocumentFieldTypeString, Value: "admin"},
+		},
+	}
+	doc3 := ds.Document{
+		Fields: map[string]ds.DocumentField{
+			"id":    {Type: ds.DocumentFieldTypeString, Value: "u3"},
+			"name":  {Type: ds.DocumentFieldTypeString, Value: "Charlie"},
+			"email": {Type: ds.DocumentFieldTypeString, Value: "charlie@mail.com"},
+			"role":  {Type: ds.DocumentFieldTypeString, Value: "user"},
+		},
+	}
+	users.AddDocument("u1", doc1)
+	users.AddDocument("u2", doc2)
+	users.AddDocument("u3", doc3)
+
+	if err := users.CreateIndex("name"); err != nil {
+		logger.Error("Index creation error", "Error", err)
+	} else {
+		logger.Info("Index Name created")
+	}
+	if err := users.CreateIndex("id"); err != nil {
+		logger.Error("Index creation error", "Error", err)
+	} else {
+		logger.Info("Index ID created")
+	}
+	minVal := "A"
+	maxVal := "D"
+	params := ds.QueryParams{
+		Desc:     true,
+		MinValue: &minVal,
+		MaxValue: &maxVal,
+	}
+	fmt.Println("Query by NAME index (descending)")
+	if results, err := users.Query("name", params); err == nil {
+		for _, doc := range results {
+			fmt.Println("Found:", doc.Fields["id"].Value, "-", doc.Fields["name"].Value)
+		}
+	} else {
+		logger.Error("Query by NAME error:", "Error", err)
+	}
+
+	fmt.Println("Query by ID index (ascending)")
+	minVal = "u1"
+	maxVal = "u2"
+	params.Desc = false
+	params.MinValue = &minVal
+	params.MaxValue = &maxVal
+	if results, err := users.Query("id", params); err == nil {
+		for _, doc := range results {
+			fmt.Println("Found:", doc.Fields["id"].Value, "-", doc.Fields["name"].Value)
+		}
+	} else {
+		logger.Error("Query by ID error:", "Error", err)
+	}
+
+	fmt.Println("Dump the store")
+	if jsonDoc, e := store.Dump(); e == nil {
+		logger.Info("The store dump was created:", "Name", store.Name)
 		logger.Debug(string(jsonDoc))
+		if restored, e := ds.NewStoreFromDump(jsonDoc); e == nil {
+			logger.Info("The initial store was restored", "Name", restored.Name)
+			fmt.Println("Query by ID in restored store")
+			maxVal = "u4"
+			params.MaxValue = &maxVal
+			if results, err := users.Query("id", params); err == nil {
+				for _, doc := range results {
+					fmt.Println("Found:", doc.Fields["name"].Value, "-", doc.Fields["role"].Value, ",", doc.Fields["email"].Value)
+				}
+			} else {
+				logger.Error("Query by ID error:", "Error", err)
+			}
+		} else {
+			logger.Error("The initial store wasn't restored", "Error", e)
+		}
 	} else {
 		logger.Error("The store dump was not created:", "Error", e)
-	}
-	restoredStore, e := ds.NewStoreFromDump(jsonDoc)
-	if e == nil {
-		logger.Info("The initial store was restored\n", "Name", restoredStore.Name)
-	} else {
-		logger.Error("The initial store wasn't restored", "Error", e)
-	}
-	if e = initialStore.DumpToFile(initialStore.Name); e != nil {
-		logger.Error("The store wasn't restored", "Name", initialStore.Name, "Error", e)
-	}
-	if e = restoredStore.DumpToFile(restoredStore.Name + "Restored"); e != nil {
-		logger.Error("The store wasn't restored", "Error", e)
-	}
-	fromFileStore, e := ds.NewStoreFromFile(initialStore.Name)
-	fileStore, e := fromFileStore.Dump()
-	if e == nil {
-		logger.Info("The store was created from the dump file:", "Name", initialStore.Name)
-		logger.Debug(string(fileStore))
-	} else {
-		logger.Error("The store wasn't restored", "Error", e)
 	}
 }
