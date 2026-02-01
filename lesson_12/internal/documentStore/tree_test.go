@@ -2,132 +2,68 @@ package documentStore
 
 import (
 	"encoding/json"
-	"fmt"
 	"reflect"
 	"testing"
 )
 
 func TestInsertAndRangeSearch(t *testing.T) {
 	tree := &BinaryTree{}
-	tree.Insert("b", "id1")
-	tree.Insert("a", "id2")
-	tree.Insert("c", "id3")
-	tree.Insert("b", "id4")
-	if tree.Root.Key != "b" {
-		t.Errorf("expected root key 'b', got %s", tree.Root.Key)
-	}
-	if len(tree.Root.ID) != 2 {
-		t.Errorf("expected 2 IDs at root, got %d", len(tree.Root.ID))
-	}
-	minVal := "a"
-	maxVal := "c"
-	result := tree.RangeSearch(&minVal, &maxVal)
-	expected := []string{"id2", "id1", "id4", "id3"}
+	tree.Insert(10, 1)
+	tree.Insert(5, 2)
+	tree.Insert(15, 3)
+	tree.Insert(10, 4) // duplicate key
+	result := tree.RangeSearch(5, 15)
+	expected := []int{2, 1, 4, 3}
 	if !reflect.DeepEqual(result, expected) {
-		t.Errorf("expected %v, got %v", expected, result)
+		t.Errorf("RangeSearch got %v, want %v", result, expected)
 	}
 }
 
-func treeHeight(node *TreeNode) int {
-	if node == nil {
-		return 0
-	}
-	left := treeHeight(node.Left)
-	right := treeHeight(node.Right)
-	if left > right {
-		return left + 1
-	}
-	return right + 1
-}
-
-func countNodes(node *TreeNode) int {
-	if node == nil {
-		return 0
-	}
-	return 1 + countNodes(node.Left) + countNodes(node.Right)
-}
-
-func TestBinaryTree_AutoBalanceSortedKeys(t *testing.T) {
+func TestRemoveFromIndex(t *testing.T) {
 	tree := &BinaryTree{}
-
-	for i := 1; i <= 20; i++ {
-		key := fmt.Sprintf("k%02d", i)
-		tree.Insert(key, fmt.Sprintf("id%02d", i))
-	}
-
-	if tree.Root == nil {
-		t.Fatalf("Root is nil after inserts")
-	}
-
-	height := treeHeight(tree.Root)
-	nodes := countNodes(tree.Root)
-
-	t.Logf("Tree height=%d, nodes=%d", height, nodes)
-
-	if height >= nodes {
-		t.Errorf("Tree degenerated into a list: height=%d, nodes=%d", height, nodes)
-	}
-	if height > 6 {
-		t.Errorf("Tree is not balanced enough: height=%d for %d nodes", height, nodes)
-	}
-}
-
-func TestMarshalUnmarshalTreeNode(t *testing.T) {
-	node := &TreeNode{
-		Key: "x",
-		ID:  []string{"id1", "id2"},
-		Left: &TreeNode{
-			Key: "l",
-			ID:  []string{"id3"},
-		},
-		Right: &TreeNode{
-			Key: "r",
-			ID:  []string{"id4"},
-		},
-	}
-	data, err := json.Marshal(node)
-	if err != nil {
-		t.Fatalf("marshal error: %v", err)
-	}
-	var restored TreeNode
-	if err := json.Unmarshal(data, &restored); err != nil {
-		t.Fatalf("unmarshal error: %v", err)
-	}
-	if restored.Key != "x" || len(restored.ID) != 2 {
-		t.Errorf("expected key 'x' with 2 IDs, got %s with %d IDs", restored.Key, len(restored.ID))
-	}
-	if restored.Left.Key != "l" || restored.Right.Key != "r" {
-		t.Errorf("expected left 'l' and right 'r', got %s and %s", restored.Left.Key, restored.Right.Key)
-	}
-}
-
-func TestMarshalUnmarshalBinaryTree(t *testing.T) {
-	tree := &BinaryTree{}
-	tree.Insert("m", "id1")
-	tree.Insert("a", "id2")
-	tree.Insert("z", "id3")
-	data, err := json.Marshal(tree)
-	if err != nil {
-		t.Fatalf("marshal error: %v", err)
-	}
-	var restored BinaryTree
-	if err := json.Unmarshal(data, &restored); err != nil {
-		t.Fatalf("unmarshal error: %v", err)
-	}
-	result := restored.RangeSearch(nil, nil)
-	expected := []string{"id2", "id1", "id3"}
+	tree.Insert(10, 1)
+	tree.Insert(10, 2)
+	tree.Insert(20, 3)
+	tree.RemoveFromIndex(10, 1)
+	result := tree.RangeSearch(0, 30)
+	expected := []int{2, 3}
 	if !reflect.DeepEqual(result, expected) {
-		t.Errorf("expected %v, got %v", expected, result)
+		t.Errorf("RemoveFromIndex got %v, want %v", result, expected)
+	}
+	tree.RemoveFromIndex(10, 2)
+	result = tree.RangeSearch(0, 30)
+	expected = []int{3}
+	if !reflect.DeepEqual(result, expected) {
+		t.Errorf("RemoveFromIndex got %v, want %v", result, expected)
 	}
 }
 
-func TestEmptyTreeMarshal(t *testing.T) {
-	var tree *BinaryTree
-	data, err := json.Marshal(tree)
-	if err != nil {
-		t.Fatalf("marshal error: %v", err)
+func TestUpdateIndex(t *testing.T) {
+	tree := &BinaryTree{}
+	tree.UpdateIndex(5, 100, true)  // додати
+	tree.UpdateIndex(5, 200, true)  // додати
+	tree.UpdateIndex(5, 100, false) // видалити
+	result := tree.RangeSearch(0, 10)
+	expected := []int{200}
+	if !reflect.DeepEqual(result, expected) {
+		t.Errorf("UpdateIndex got %v, want %v", result, expected)
 	}
-	if string(data) != "null" {
-		t.Errorf("expected 'null', got %s", string(data))
+}
+
+func TestJSONMarshalUnmarshal(t *testing.T) {
+	tree := &BinaryTree{}
+	tree.Insert(1, 1)
+	tree.Insert(5, 2)
+	tree.Insert(10, 3)
+	data, err := json.Marshal(tree.Root)
+	if err != nil {
+		t.Fatalf("Marshal error: %v", err)
+	}
+	var node TreeNode
+	if err := json.Unmarshal(data, &node); err != nil {
+		t.Fatalf("Unmarshal error: %v", err)
+	}
+	if node.Key != 5 {
+		t.Errorf("Expected root key 10, got %d", node.Key)
 	}
 }

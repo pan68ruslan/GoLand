@@ -18,7 +18,7 @@ func NewStore(name string, logger *slog.Logger) *Store {
 	if name != "" {
 		nm = name
 	} else {
-		nm = "NewStore"
+		nm = "DocumentStore"
 	}
 	return &Store{
 		Name:        nm,
@@ -28,7 +28,8 @@ func NewStore(name string, logger *slog.Logger) *Store {
 }
 
 func (s *Store) AddCollection(name string, cfg *CollectionConfig) {
-	s.Collections[name] = NewCollection(name, cfg, s.Logger)
+	var coll = NewCollection(name, s.Logger)
+	s.Collections[name] = &coll
 	s.Logger.Info("Added collection",
 		slog.String("store", s.Name),
 		slog.String("collection", name))
@@ -36,36 +37,36 @@ func (s *Store) AddCollection(name string, cfg *CollectionConfig) {
 
 func (s *Store) CreateCollection(name string, cfg *CollectionConfig, logger *slog.Logger) (bool, *Collection) {
 	if _, ok := s.Collections[name]; ok {
-		s.Logger.Info("[Store]The collection '%s' already exists\n", name)
+		s.Logger.Info(fmt.Sprintf("[Store]The collection '%s' already exists\n", name))
 		return false, nil
 	}
 	col := &Collection{
 		Name:      name,
 		Cfg:       cfg,
-		Documents: make(map[string]Document),
+		Documents: make(map[int]Document),
 		Logger:    logger,
 	}
 	s.Collections[name] = col
-	s.Logger.Info("[Store]The collection '%s' was created\n", name)
+	s.Logger.Info(fmt.Sprintf("[Store]The collection '%s' was created\n", name))
 	return true, col
 }
 
 func (s *Store) GetCollection(name string) (*Collection, bool) {
 	if col, ok := s.Collections[name]; ok {
-		s.Logger.Info("[Store]The collection '%s' was found\n", name)
+		s.Logger.Info(fmt.Sprintf("[Store]The collection '%s' was found\n", name))
 		return col, true
 	}
-	s.Logger.Info("[Store]The collection '%s' was not found\n", name)
+	s.Logger.Info(fmt.Sprintf("[Store]The collection '%s' was not found\n", name))
 	return nil, false
 }
 
 func (s *Store) DeleteCollection(name string) bool {
 	if _, ok := s.Collections[name]; ok {
-		s.Logger.Info("[Store]The collection '%s' has been deleted\n", name)
+		s.Logger.Info(fmt.Sprintf("[Store]The collection '%s' has been deleted\n", name))
 		delete(s.Collections, name)
 		return true
 	}
-	s.Logger.Info("[Store]The collection '%s' doesn't exist\n", name)
+	s.Logger.Info(fmt.Sprintf("[Store]The collection '%s' doesn't exist\n", name))
 	return false
 }
 

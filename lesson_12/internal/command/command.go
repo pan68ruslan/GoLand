@@ -1,5 +1,12 @@
 package command
 
+import (
+	"bufio"
+	"fmt"
+	"net"
+	"strings"
+)
+
 const (
 	AddCommandName        string = "add"
 	GetCommandName        string = "get"
@@ -8,20 +15,36 @@ const (
 	ListCommandName       string = "list"
 	ConnectCommandName    string = "connect"
 	DisconnectCommandName string = "disconnect"
+	ResponseCommandName   string = "response"
+	UnknownCommandName    string = "unknown"
 	PingCommandName       string = "ping"
 )
 
-const (
-	ActiveClient string = "Connected"
-)
-
-type CommandRequest struct {
-	Type   string `json:"tape"`
-	Sender string `json:"sender"`
-	Value  string `json:"value"`
+type Command struct {
+	conn  net.Conn
+	Type  string `json:"tape"`
+	Value string `json:"value"`
 }
 
-type CommandResponse struct {
+func NewCommand(c net.Conn) *Command {
+	return &Command{
+		conn:  c,
+		Type:  UnknownCommandName,
+		Value: "",
+	}
+}
+
+func (c *Command) Handle() (string, error) {
+	//defer c.conn.Close()
+	var reader = bufio.NewReader(c.conn)
+	var writer = bufio.NewWriter(c.conn)
+	_, _ = writer.WriteString(fmt.Sprintf("%s|%s\n", c.Type, c.Value))
+	_ = writer.Flush()
+	resp, err := reader.ReadString('\n')
+	return strings.TrimSpace(resp), err
+}
+
+/*type CommandResponse struct {
 	Result bool   `json:"result"`
 	Value  string `json:"value"`
-}
+}*/

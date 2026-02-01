@@ -26,8 +26,8 @@ type Collection struct {
 	Logger    *slog.Logger
 }
 
-func NewCollection(name string, cfg *CollectionConfig, logger *slog.Logger) *Collection {
-	return &Collection{
+func NewCollection(name string, cfg *CollectionConfig, logger *slog.Logger) Collection {
+	return Collection{
 		Name:      name,
 		Cfg:       cfg,
 		Documents: make(map[string]Document),

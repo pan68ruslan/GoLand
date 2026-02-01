@@ -26,17 +26,17 @@ type Document struct {
 	Fields map[string]DocumentField `json:"fields"`
 }
 
-func NewDoc(owner string) Document {
-	return Document{
+func NewDoc(owner string) *Document {
+	return &Document{
 		Fields: map[string]DocumentField{
-			"key":   DocumentField{Type: DocumentFieldTypeNumber, Value: 0},
+			"id":    DocumentField{Type: DocumentFieldTypeNumber, Value: 0},
 			"text":  DocumentField{Type: DocumentFieldTypeString, Value: fmt.Sprintf("Document was created by %s at %s.\n", owner, time.Now())},
 			"owner": DocumentField{Type: DocumentFieldTypeString, Value: owner},
 		},
 	}
 }
 
-func (d *Document) Update(worker string) error {
+func (d *Document) UpdateContent(worker string) error {
 	field, ok := d.Fields["text"]
 	if !ok {
 		slog.Error("field 'text' not found in document")
@@ -59,6 +59,7 @@ func (d *Document) Update(worker string) error {
 	return nil
 }
 
+// For marshaling
 func (d *Document) MarshalJSON() ([]byte, error) {
 	out := make(map[string]map[string]interface{})
 	for key, field := range d.Fields {

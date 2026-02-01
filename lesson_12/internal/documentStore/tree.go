@@ -6,8 +6,8 @@ import (
 )
 
 type TreeNode struct {
-	Key   string
-	ID    []string
+	Key   int
+	ID    []int
 	Left  *TreeNode
 	Right *TreeNode
 }
@@ -18,8 +18,8 @@ type BinaryTree struct {
 }
 
 func BalanceTree(root *TreeNode) *TreeNode {
-	var keys []string
-	var ids [][]string
+	var keys []int
+	var ids [][]int
 
 	var inorder func(node *TreeNode)
 	inorder = func(node *TreeNode) {
@@ -49,16 +49,16 @@ func BalanceTree(root *TreeNode) *TreeNode {
 	return build(0, len(keys)-1)
 }
 
-func (t *BinaryTree) Insert(key string, id string) {
+func (t *BinaryTree) Insert(key, id int) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	t.Root = insertNode(t.Root, key, id)
 	t.Root = BalanceTree(t.Root)
 }
 
-func insertNode(node *TreeNode, key string, id string) *TreeNode {
+func insertNode(node *TreeNode, key, id int) *TreeNode {
 	if node == nil {
-		return &TreeNode{Key: key, ID: []string{id}}
+		return &TreeNode{Key: key, ID: []int{id}}
 	}
 	if key < node.Key {
 		node.Left = insertNode(node.Left, key, id)
@@ -70,37 +70,37 @@ func insertNode(node *TreeNode, key string, id string) *TreeNode {
 	return node
 }
 
-func (t *BinaryTree) RangeSearch(min, max *string) []string {
-	var result []string
+func (t *BinaryTree) RangeSearch(min, max int) []int {
+	var result []int
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	inOrderRange(t.Root, min, max, &result)
 	return result
 }
 
-func inOrderRange(node *TreeNode, min, max *string, result *[]string) {
+func inOrderRange(node *TreeNode, min, max int, result *[]int) {
 	if node == nil {
 		return
 	}
-	if min == nil || node.Key >= *min {
+	if node.Key >= min {
 		inOrderRange(node.Left, min, max, result)
 	}
-	if (min == nil || node.Key >= *min) && (max == nil || node.Key <= *max) {
+	if node.Key >= min && node.Key <= max {
 		*result = append(*result, node.ID...)
 	}
-	if max == nil || node.Key <= *max {
+	if node.Key <= max {
 		inOrderRange(node.Right, min, max, result)
 	}
 }
 
-func (t *BinaryTree) RemoveFromIndex(key string, id string) {
+func (t *BinaryTree) RemoveFromIndex(key, id int) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	t.Root = removeIDFromNode(t.Root, key, id)
 	t.Root = BalanceTree(t.Root)
 }
 
-func removeIDFromNode(node *TreeNode, key string, id string) *TreeNode {
+func removeIDFromNode(node *TreeNode, key, id int) *TreeNode {
 	if node == nil {
 		return nil
 	}
@@ -109,7 +109,7 @@ func removeIDFromNode(node *TreeNode, key string, id string) *TreeNode {
 	} else if key > node.Key {
 		node.Right = removeIDFromNode(node.Right, key, id)
 	} else {
-		newIDs := make([]string, 0, len(node.ID))
+		newIDs := make([]int, 0, len(node.ID))
 		for _, existingID := range node.ID {
 			if existingID != id {
 				newIDs = append(newIDs, existingID)
@@ -135,7 +135,7 @@ func removeIDFromNode(node *TreeNode, key string, id string) *TreeNode {
 	return node
 }
 
-func removeNode(node *TreeNode, key string) *TreeNode {
+func removeNode(node *TreeNode, key int) *TreeNode {
 	if node == nil {
 		return nil
 	}
@@ -161,7 +161,7 @@ func removeNode(node *TreeNode, key string) *TreeNode {
 	return node
 }
 
-func (t *BinaryTree) UpdateIndex(key string, id string, add bool) {
+func (t *BinaryTree) UpdateIndex(key, id int, add bool) {
 	if add {
 		t.Insert(key, id)
 	} else {
@@ -184,8 +184,8 @@ func (n *TreeNode) MarshalJSON() ([]byte, error) {
 
 func (n *TreeNode) UnmarshalJSON(data []byte) error {
 	var out struct {
-		Key   string    `json:"Key"`
-		ID    []string  `json:"ID"`
+		Key   int       `json:"Key"`
+		ID    []int     `json:"ID"`
 		Left  *TreeNode `json:"Left"`
 		Right *TreeNode `json:"Right"`
 	}
