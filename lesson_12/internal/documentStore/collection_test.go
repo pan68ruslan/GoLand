@@ -18,7 +18,6 @@ func TestCollection_AddGetDelete(t *testing.T) {
 	if err := coll.PutDocument(doc); err != nil {
 		t.Fatalf("AddDocument failed: %v", err)
 	}
-
 	got, ok := coll.GetDocument(id)
 	if !ok {
 		t.Fatalf("Get failed: document not found")
@@ -26,7 +25,6 @@ func TestCollection_AddGetDelete(t *testing.T) {
 	if got.Fields["name"].Value != "Alice" {
 		t.Errorf("expected name=Alice, got %v", got.Fields["name"].Value)
 	}
-
 	if !coll.DeleteDocument(id) {
 		t.Fatalf("DeleteDocument failed: document not deleted")
 	}
@@ -91,11 +89,10 @@ func TestCollectionConfig_MarshalUnmarshal(t *testing.T) {
 }
 
 func TestCollection_MarshalUnmarshal(t *testing.T) {
-	id := 1
 	c := &Collection{
 		Name:      "TestCollection",
 		Cfg:       &CollectionConfig{PrimaryKey: "id"},
-		Documents: map[int]Document{id: NewDoc("user")},
+		Documents: map[int]Document{1: *NewDoc("user")},
 	}
 	data, err := json.Marshal(c)
 	if err != nil {
