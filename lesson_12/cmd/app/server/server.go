@@ -75,14 +75,19 @@ func (s *Server) HandleConnection(conn net.Conn) {
 				var doc ds.Document
 				if err := json.Unmarshal([]byte(ll[1]), &doc); err == nil {
 					s.logger.Info("[Server]unmarshal document", "doc", ll[1])
-					id := s.documents.MaxId()
-					s.logger.Info("[Server]max document's id", "id", id)
-					doc.Fields["id"] = ds.DocumentField{Type: ds.DocumentFieldTypeNumber, Value: id + 1}
 					if e := s.documents.PutDocument(doc); e == nil {
 						response = fmt.Sprintf("%d", s.documents.MaxId())
 					}
 				} else {
 					s.logger.Error("[Server]failed to unmarshal document", "error", err)
+				}
+			case cmd.DeleteCommandName: // delete existing doc
+				if id, e := strconv.Atoi(ll[1]); e == nil {
+					if ok := s.documents.DeleteDocument(id); ok == true {
+						s.logger.Info("[Server]document ", "id", id)
+					} else {
+						s.logger.Error("[Server]failed to find document", "id", id)
+					}
 				}
 			default:
 				s.logger.Error(fmt.Sprintln("[Server]unknown command: ", line))

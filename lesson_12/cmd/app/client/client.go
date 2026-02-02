@@ -67,6 +67,8 @@ func (c *Client) Connect(conn net.Conn, rd *bufio.Scanner) bool {
 						}
 					}
 				}
+			case cmd.DeleteCommandName:
+				command.Value = fmt.Sprintf("%s", ll[1])
 			default:
 				slog.Error("unknown command: " + line + "\n")
 				return true
@@ -95,7 +97,7 @@ func (c *Client) Connect(conn net.Conn, rd *bufio.Scanner) bool {
 						var data = []byte(rr[1])
 						if err := json.Unmarshal(data, &doc); err == nil {
 							if e := c.documents.PutDocument(doc); e == nil {
-								slog.Info("found document, quit", "doc", rr[1]) //, "doc0", eee)
+								slog.Info("found document, quit", "doc", rr[1])
 							}
 						}
 					case cmd.PutCommandName:
@@ -103,6 +105,12 @@ func (c *Client) Connect(conn net.Conn, rd *bufio.Scanner) bool {
 							slog.Info("the document was updated", "id", id)
 						} else {
 							slog.Error("can't put document", "error", err)
+						}
+					case cmd.DeleteCommandName:
+						if id, err := strconv.Atoi(rr[1]); err == nil {
+							slog.Info("the document was deleted", "id", id)
+						} else {
+							slog.Error("can't delete document", "error", err)
 						}
 					}
 					slog.Info("List of ", "documents:", c.getDocuments())
@@ -113,18 +121,3 @@ func (c *Client) Connect(conn net.Conn, rd *bufio.Scanner) bool {
 	}
 	return false
 }
-
-/*func (c *Client) addCommand(args []string) {
-	doc := ds.NewDoc(c.name)
-	if msg, err := doc.MarshalJSON(); err != nil {
-		c.writer.WriteString(fmt.Sprintf("%s %s\n", cmd.AddCommandName, base64.StdEncoding.EncodeToString([]byte(msg))))
-	}
-}
-
-func (c *Client) getCommand(args []string) {
-
-}
-
-func (c *Client) putCommand(args []string) {
-
-*/
