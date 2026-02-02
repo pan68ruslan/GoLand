@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"math"
 	"sort"
+	"strconv"
 	"sync"
 )
 
@@ -64,28 +65,27 @@ func NewCollection(name string, logger *slog.Logger) Collection {
 func (c *Collection) PutDocument(doc Document) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	/*if c.Cfg == nil || c.Cfg.PrimaryKey == "" {
-		return fmt.Errorf("collection config is not configured")
-	}*/
 	field, ok := doc.Fields[c.Cfg.PrimaryKey]
 	if !ok || field.Type != DocumentFieldTypeNumber {
 		return fmt.Errorf("document missing primary key field or wrong type")
 	}
-	key, ok := field.Value.(int)
-	if !ok {
-		return fmt.Errorf("primary key value is not a number")
+	key, err := ToInt(field.Value)
+	if err != nil {
+		return err
 	}
 	if oldDoc, exists := c.Documents[key]; exists {
 		for _, idxField := range c.Cfg.IndexedFields {
 			if oldField, ok := oldDoc.Fields[idxField]; ok {
-				c.Indexes[idxField].RemoveFromIndex(oldField.Value.(int), key)
+				oldId, _ := ToInt(oldField)
+				c.Indexes[idxField].RemoveFromIndex(oldId, key)
 			}
 		}
 	}
 	c.Documents[key] = doc
 	for _, idxField := range c.Cfg.IndexedFields {
 		if field, ok := doc.Fields[idxField]; ok {
-			c.Indexes[idxField].Insert(field.Value.(int), key)
+			id, _ := ToInt(field.Value)
+			c.Indexes[idxField].Insert(id, key)
 		}
 	}
 	return nil
@@ -100,7 +100,8 @@ func (c *Collection) DeleteDocument(key int) bool {
 	}
 	for _, idxField := range c.Cfg.IndexedFields {
 		if field, ok := doc.Fields[idxField]; ok {
-			c.Indexes[idxField].RemoveFromIndex(field.Value.(int), key)
+			id, _ := ToInt(field.Value)
+			c.Indexes[idxField].RemoveFromIndex(id, key)
 		}
 	}
 	delete(c.Documents, key)
@@ -156,4 +157,21 @@ func (c *Collection) MaxId() int {
 		}
 	}
 	return max
+}
+
+func ToInt(val interface{}) (int, error) {
+	switch v := val.(type) {
+	case int:
+		return v, nil
+	case float64:
+		return int(v), nil
+	case string:
+		i, err := strconv.Atoi(v)
+		if err != nil {
+			return 0, fmt.Errorf("cannot convert string to int: %w", err)
+		}
+		return i, nil
+	default:
+		return 0, fmt.Errorf("unsupported type: %T", v)
+	}
 }

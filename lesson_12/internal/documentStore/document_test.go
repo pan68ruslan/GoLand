@@ -9,6 +9,7 @@ func TestDocument_MarshalUnmarshal_StringField(t *testing.T) {
 	doc := &Document{
 		Fields: map[string]DocumentField{
 			"title": {Type: DocumentFieldTypeString, Value: "MyTitle"},
+			"text":  {Type: DocumentFieldTypeString, Value: "MyText"},
 		},
 	}
 	data, err := json.Marshal(doc)

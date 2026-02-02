@@ -30,7 +30,7 @@ func NewDoc(owner string) *Document {
 	return &Document{
 		Fields: map[string]DocumentField{
 			"id":    DocumentField{Type: DocumentFieldTypeNumber, Value: 0},
-			"text":  DocumentField{Type: DocumentFieldTypeString, Value: fmt.Sprintf("Document was created by %s at %s.\n", owner, time.Now())},
+			"text":  DocumentField{Type: DocumentFieldTypeString, Value: fmt.Sprintf("Document was created by %s at %s.\n", owner, time.Now().Format("2006-01-02 15:04:05.00"))},
 			"owner": DocumentField{Type: DocumentFieldTypeString, Value: owner},
 		},
 	}
@@ -51,7 +51,7 @@ func (d *Document) UpdateContent(worker string) error {
 		slog.Error("field 'text' value is not a string", "value", field.Value)
 		return fmt.Errorf("value of 'text' field is not a string")
 	}
-	updateMsg := fmt.Sprintf("Document was updated by %s at %s.\n", worker, time.Now())
+	updateMsg := fmt.Sprintf("Document was updated by %s at %s.\n", worker, time.Now().Format("2006-01-02 15:04:05.00"))
 	text += updateMsg
 	field.Value = text
 	d.Fields["text"] = field

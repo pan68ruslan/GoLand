@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
+	"strconv"
 	"strings"
 
 	cmd "lesson_12/internal/command"
@@ -42,30 +43,41 @@ func (s *Server) HandleConnection(conn net.Conn) {
 		line := netScanner.Text()
 		s.logger.Info("[Server]received message", "addr", conn.RemoteAddr(), "msg", line)
 		ll := strings.Split(line, "|")
+		response := ""
 		if len(ll) <= 2 {
 			switch ll[0] {
 			case cmd.AddCommandName:
 				s.logger.Info("[Server]add command message", "name", ll)
 				var doc ds.Document
 				if err := json.Unmarshal([]byte(ll[1]), &doc); err == nil {
-					//i := s.documents.MaxId()
-					s.logger.Info("[Server]unmarshal document", "doc", doc)
-					doc.Fields["id"] = ds.DocumentField{Type: ds.DocumentFieldTypeNumber, Value: s.documents.MaxId() + 1}
-					s.documents.PutDocument(doc)
+					s.logger.Info("[Server]unmarshal document", "doc", ll[1])
+					id := s.documents.MaxId()
+					s.logger.Info("[Server]max document's id", "id", id)
+					doc.Fields["id"] = ds.DocumentField{Type: ds.DocumentFieldTypeNumber, Value: id + 1}
+					if e := s.documents.PutDocument(doc); e == nil {
+						response = fmt.Sprintf("%d", s.documents.MaxId())
+					}
 				} else {
 					s.logger.Error("[Server]failed to unmarshal document", "error", err)
 				}
 			case cmd.GetCommandName:
-				//go getCommand(ll[1:])
-			case cmd.PutCommandName:
+				if id, e := strconv.Atoi(ll[1]); e == nil {
+					if dc, ok := s.documents.GetDocument(id); ok == true {
+						if d, err := json.Marshal(dc); err == nil {
+							response = string(d)
+							s.logger.Info("[Server]marshal document", "doc", response)
+						} else {
+							s.logger.Error("[Server]failed to marshal document", "error", err)
+						}
+					}
+				}
+			case cmd.PutCommandName: //update
 				//go putCommand(ll[1:])
 			default:
 				s.logger.Error(fmt.Sprintln("[Server]unknown command: ", line))
-				//_ = consoleWriter.Flush()
 			}
 		}
-		//_, err := netWriter.WriteString("[Server]pong: " + line + "\n")
-		_, err := netWriter.WriteString(fmt.Sprintf("%s|%d\n", cmd.ResponseCommandName, s.documents.MaxId()))
+		_, err := netWriter.WriteString(fmt.Sprintf("%s|%s\n", cmd.ResponseCommandName, response))
 		if err != nil {
 			s.logger.Error("[Server]failed to write response", "error", err)
 			return

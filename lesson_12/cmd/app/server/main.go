@@ -17,11 +17,12 @@ func main() {
 	Server := NewServer("TheServer", logger)
 	for {
 		conn, err := listener.Accept()
-		if err != nil {
-			logger.Error("[Server]accept connection", "error", err)
+		if err == nil {
+			logger.Info("[Server]connection accepted", "addr", conn.RemoteAddr())
+			go Server.HandleConnection(conn)
+		} else {
+			logger.Error("[Server]connection failed", "error", err)
 			continue
 		}
-		logger.Info("[Server]new client connected", "addr", conn.RemoteAddr())
-		Server.HandleConnection(conn)
 	}
 }
