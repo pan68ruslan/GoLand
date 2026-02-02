@@ -85,8 +85,10 @@ func (s *Server) HandleConnection(conn net.Conn) {
 				if id, e := strconv.Atoi(ll[1]); e == nil {
 					if ok := s.documents.DeleteDocument(id); ok == true {
 						s.logger.Info("[Server]document ", "id", id)
+						response = fmt.Sprintf("%d", id)
 					} else {
 						s.logger.Error("[Server]failed to find document", "id", id)
+						response = "0"
 					}
 				}
 			default:
