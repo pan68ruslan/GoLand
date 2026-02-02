@@ -108,7 +108,14 @@ func (c *Client) Connect(conn net.Conn, rd *bufio.Scanner) bool {
 						}
 					case cmd.DeleteCommandName:
 						if id, err := strconv.Atoi(rr[1]); err == nil {
-							slog.Info("the document was deleted", "id", id)
+							var res = ""
+							if id == 0 {
+								res = "wasn't"
+							} else {
+								res = "was"
+							}
+							var msg = fmt.Sprintf("the document %s deleted", res)
+							slog.Info(msg, "id", id)
 						} else {
 							slog.Error("can't delete document", "error", err)
 						}
