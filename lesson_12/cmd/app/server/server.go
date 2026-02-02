@@ -21,7 +21,6 @@ type Server struct {
 
 func NewServer(name string, logger *slog.Logger) *Server {
 	docs := ds.NewCollection("Documents", logger)
-	//logger = logger.With("server", name)
 	return &Server{
 		name:      name,
 		documents: docs,
@@ -46,7 +45,7 @@ func (s *Server) HandleConnection(conn net.Conn) {
 		response := ""
 		if len(ll) <= 2 {
 			switch ll[0] {
-			case cmd.AddCommandName:
+			case cmd.AddCommandName: // create new doc
 				s.logger.Info("[Server]add command message", "name", ll)
 				var doc ds.Document
 				if err := json.Unmarshal([]byte(ll[1]), &doc); err == nil {
@@ -60,7 +59,7 @@ func (s *Server) HandleConnection(conn net.Conn) {
 				} else {
 					s.logger.Error("[Server]failed to unmarshal document", "error", err)
 				}
-			case cmd.GetCommandName:
+			case cmd.GetCommandName: // get existing doc
 				if id, e := strconv.Atoi(ll[1]); e == nil {
 					if dc, ok := s.documents.GetDocument(id); ok == true {
 						if d, err := json.Marshal(dc); err == nil {
@@ -71,8 +70,20 @@ func (s *Server) HandleConnection(conn net.Conn) {
 						}
 					}
 				}
-			case cmd.PutCommandName: //update
-				//go putCommand(ll[1:])
+			case cmd.PutCommandName: // update doc content
+				s.logger.Info("[Server]add command message", "name", ll)
+				var doc ds.Document
+				if err := json.Unmarshal([]byte(ll[1]), &doc); err == nil {
+					s.logger.Info("[Server]unmarshal document", "doc", ll[1])
+					id := s.documents.MaxId()
+					s.logger.Info("[Server]max document's id", "id", id)
+					doc.Fields["id"] = ds.DocumentField{Type: ds.DocumentFieldTypeNumber, Value: id + 1}
+					if e := s.documents.PutDocument(doc); e == nil {
+						response = fmt.Sprintf("%d", s.documents.MaxId())
+					}
+				} else {
+					s.logger.Error("[Server]failed to unmarshal document", "error", err)
+				}
 			default:
 				s.logger.Error(fmt.Sprintln("[Server]unknown command: ", line))
 			}

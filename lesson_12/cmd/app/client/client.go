@@ -41,7 +41,7 @@ func (c *Client) getDocuments() string {
 }
 
 func (c *Client) Connect(conn net.Conn, rd *bufio.Scanner) bool {
-	c.logger.Info("write command: ")
+	slog.Info("write command: ")
 	for rd.Scan() {
 		line := rd.Text()
 		ll := strings.Split(line, " ")
@@ -60,9 +60,10 @@ func (c *Client) Connect(conn net.Conn, rd *bufio.Scanner) bool {
 			case cmd.PutCommandName:
 				if id, ei := strconv.Atoi(ll[1]); ei == nil {
 					if doc, ok := c.documents.GetDocument(id); ok {
-						doc.UpdateContent(c.name)
-						if msg, ew := json.Marshal(doc); ew == nil {
-							command.Value = string(msg)
+						if err := doc.UpdateContent(c.name); err == nil {
+							if msg, ew := json.Marshal(doc); ew == nil {
+								command.Value = string(msg)
+							}
 						}
 					}
 				}
