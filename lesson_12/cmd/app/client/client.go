@@ -28,18 +28,6 @@ func NewClient(name string, logger *slog.Logger) *Client {
 	}
 }
 
-func (c *Client) getDocuments() string {
-	result := ""
-	for _, d := range c.documents.Documents {
-		if len(result) > 0 {
-			result += ", "
-		}
-		id, _ := ds.ToInt(d.Fields["id"].Value)
-		result += fmt.Sprintf("%d", id)
-	}
-	return result
-}
-
 func (c *Client) Connect(conn net.Conn, rd *bufio.Scanner) bool {
 	slog.Info("write command: ")
 	for rd.Scan() {
@@ -49,47 +37,56 @@ func (c *Client) Connect(conn net.Conn, rd *bufio.Scanner) bool {
 			// Prepare and send the command
 			var command = cmd.NewCommand(conn)
 			command.Type = ll[0]
+			if len(ll) == 2 {
+				command.Value = fmt.Sprintf("%s", ll[1])
+			}
 			switch ll[0] {
 			case cmd.AddCommandName:
-				var doc = ds.NewDoc(c.name)
-				if msg, ew := json.Marshal(doc); ew == nil {
+				var doc = ds.NewDocument(c.name)
+				if msg, e := json.Marshal(doc); e == nil {
 					command.Value = string(msg)
 				}
 			case cmd.GetCommandName:
-				command.Value = fmt.Sprintf("%s", ll[1])
+				break
 			case cmd.PutCommandName:
-				if id, ei := strconv.Atoi(ll[1]); ei == nil {
-					if doc, ok := c.documents.GetDocument(id); ok {
-						if err := doc.UpdateContent(c.name); err == nil {
-							if msg, ew := json.Marshal(doc); ew == nil {
-								command.Value = string(msg)
+				if len(ll) == 2 {
+					if id, err := strconv.Atoi(ll[1]); err == nil {
+						if doc, ok := c.documents.GetDocument(id); ok {
+							if err = doc.UpdateContent(c.name); err == nil {
+								if msg, e := json.Marshal(doc); e == nil {
+									command.Value = string(msg)
+								}
 							}
 						}
 					}
 				}
+			case cmd.ListCommandName:
+				if len(ll) == 1 {
+					command.Value = "0"
+				}
 			case cmd.DeleteCommandName:
-				command.Value = fmt.Sprintf("%s", ll[1])
+				break
 			default:
-				slog.Error("unknown command: " + line + "\n")
+				slog.Error("unknown command: "+line+"\n", "available commands", "add, get, put, del, list")
 				return true
 			}
 			// Process the response
 			if command.Value != "" {
 				var response, er = command.Handle()
 				rr := strings.Split(response, "|")
-				if er != nil && len(rr) == 2 && rr[0] == cmd.ResponseCommandName && (len(rr[1]) > 0) {
+				if er != nil && len(rr) == 2 && rr[0] == cmd.ResponseCommandName {
 					slog.Info("unknown response, quit", "response", response)
 					break
-				} else {
+				} else if len(rr) == 2 && len(rr[1]) > 0 {
 					switch command.Type {
 					case cmd.AddCommandName:
 						if id, err := strconv.Atoi(rr[1]); err == nil {
-							doc := ds.NewDoc(c.name)
+							doc := ds.NewDocument(c.name)
 							doc.Fields["id"] = ds.DocumentField{Type: ds.DocumentFieldTypeNumber, Value: id}
 							if e := c.documents.PutDocument(*doc); e == nil {
 								slog.Info("new document added", "id", id)
 							} else {
-								slog.Error("can't put document", "error", e)
+								slog.Error("can't add a new document", "error", e)
 							}
 						}
 					case cmd.GetCommandName:
@@ -97,7 +94,7 @@ func (c *Client) Connect(conn net.Conn, rd *bufio.Scanner) bool {
 						var data = []byte(rr[1])
 						if err := json.Unmarshal(data, &doc); err == nil {
 							if e := c.documents.PutDocument(doc); e == nil {
-								slog.Info("found document, quit", "doc", rr[1])
+								slog.Info("found document", "doc", rr[1])
 							}
 						}
 					case cmd.PutCommandName:
@@ -106,6 +103,8 @@ func (c *Client) Connect(conn net.Conn, rd *bufio.Scanner) bool {
 						} else {
 							slog.Error("can't put document", "error", err)
 						}
+					case cmd.ListCommandName:
+						slog.Info("the server's list of", "documents", rr[1])
 					case cmd.DeleteCommandName:
 						if id, err := strconv.Atoi(rr[1]); err == nil {
 							var res = ""
@@ -120,8 +119,10 @@ func (c *Client) Connect(conn net.Conn, rd *bufio.Scanner) bool {
 							slog.Error("can't delete document", "error", err)
 						}
 					}
-					slog.Info("List of ", "documents:", c.getDocuments())
+					slog.Info("the local list of", "documents:", c.documents.GetDocumentsList("3", "owner"))
 				}
+			} else {
+				slog.Error("This command needs the second parameter.", "command", ll)
 			}
 		}
 		slog.Info("write the next command: ")

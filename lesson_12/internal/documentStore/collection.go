@@ -32,7 +32,7 @@ func NewConfig() *CollectionConfig {
 	key := "id"
 	return &CollectionConfig{
 		PrimaryKey:    key,
-		IndexedFields: []string{key}, //{"id", "name"},
+		IndexedFields: []string{key},
 	}
 }
 
@@ -69,14 +69,14 @@ func (c *Collection) PutDocument(doc Document) error {
 	if !ok || field.Type != DocumentFieldTypeNumber {
 		return fmt.Errorf("document missing primary key field or wrong type")
 	}
-	key, err := ToInt(field.Value)
+	key, err := toInt(field.Value)
 	if err != nil {
 		return err
 	}
 	if oldDoc, exists := c.Documents[key]; exists {
 		for _, idxField := range c.Cfg.IndexedFields {
 			if oldField, ok := oldDoc.Fields[idxField]; ok {
-				oldId, _ := ToInt(oldField)
+				oldId, _ := toInt(oldField)
 				c.Indexes[idxField].RemoveFromIndex(oldId, key)
 			}
 		}
@@ -84,7 +84,7 @@ func (c *Collection) PutDocument(doc Document) error {
 	c.Documents[key] = doc
 	for _, idxField := range c.Cfg.IndexedFields {
 		if field, ok := doc.Fields[idxField]; ok {
-			id, _ := ToInt(field.Value)
+			id, _ := toInt(field.Value)
 			c.Indexes[idxField].Insert(id, key)
 		}
 	}
@@ -100,7 +100,7 @@ func (c *Collection) DeleteDocument(key int) bool {
 	}
 	for _, idxField := range c.Cfg.IndexedFields {
 		if field, ok := doc.Fields[idxField]; ok {
-			id, _ := ToInt(field.Value)
+			id, _ := toInt(field.Value)
 			c.Indexes[idxField].RemoveFromIndex(id, key)
 		}
 	}
@@ -120,10 +120,10 @@ func (c *Collection) GetDocument(key int) (*Document, bool) {
 	return &doc, true
 }
 
-func (c *Collection) Query( /*fieldName string, */ params QueryParams) ([]Document, error) {
+func (c *Collection) Query(params QueryParams) ([]Document, error) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	idx, exists := c.Indexes[c.Cfg.PrimaryKey] //c.Indexes[fieldName]
+	idx, exists := c.Indexes[c.Cfg.PrimaryKey]
 	if !exists {
 		return nil, fmt.Errorf("index does not exist for field %s", c.Cfg.PrimaryKey)
 	}
@@ -151,26 +151,63 @@ func (c *Collection) Query( /*fieldName string, */ params QueryParams) ([]Docume
 
 func (c *Collection) MaxId() int {
 	max := 0
-	for _, doc := range c.Documents {
-		if m := doc.Fields["id"].Value.(int); m > max {
-			max = m
+	for _, d := range c.Documents {
+		if id, err := toInt(d.Fields["id"].Value); err == nil && id > max {
+			max = id
 		}
 	}
 	return max
 }
 
-func ToInt(val interface{}) (int, error) {
+func (c *Collection) GetDocumentsList(param ...string) string {
+	result := ""
+	count := 0
+	key := ""
+	if len(param) > 0 {
+		if i, err := strconv.Atoi(param[0]); err == nil {
+			count = i
+		} else {
+			key = param[0]
+		}
+		if len(param) > 1 {
+			key = param[1]
+		}
+	}
+	if key == "id" {
+		key = ""
+	}
+	for _, d := range c.Documents {
+		if len(result) > 0 {
+			result += ", "
+		}
+		info := ""
+		if key != "" {
+			if dt, ok := d.Fields[key].Value.(string); ok && dt != "" {
+				info = fmt.Sprintf("[%s]", dt)
+			}
+		}
+		id, _ := toInt(d.Fields["id"].Value)
+		result += fmt.Sprintf("%d%s", id, info)
+		count--
+		if count == 0 {
+			break
+		}
+	}
+	return result
+}
+
+func toInt(val interface{}) (int, error) {
 	switch v := val.(type) {
 	case int:
 		return v, nil
 	case float64:
 		return int(v), nil
 	case string:
-		i, err := strconv.Atoi(v)
-		if err != nil {
+		if i, err := strconv.Atoi(v); err != nil {
 			return 0, fmt.Errorf("cannot convert string to int: %w", err)
+		} else {
+			return i, nil
 		}
-		return i, nil
 	default:
 		return 0, fmt.Errorf("unsupported type: %T", v)
 	}

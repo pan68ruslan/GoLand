@@ -43,9 +43,9 @@ func (s *Server) HandleConnection(conn net.Conn) {
 		s.logger.Info("[Server]received message", "addr", conn.RemoteAddr(), "msg", line)
 		ll := strings.Split(line, "|")
 		response := ""
-		if len(ll) <= 2 {
+		if len(ll) == 2 {
 			switch ll[0] {
-			case cmd.AddCommandName: // create new doc
+			case cmd.AddCommandName: // create new document
 				s.logger.Info("[Server]add command message", "name", ll)
 				var doc ds.Document
 				if err := json.Unmarshal([]byte(ll[1]), &doc); err == nil {
@@ -59,7 +59,7 @@ func (s *Server) HandleConnection(conn net.Conn) {
 				} else {
 					s.logger.Error("[Server]failed to unmarshal document", "error", err)
 				}
-			case cmd.GetCommandName: // get existing doc
+			case cmd.GetCommandName: // get existing document
 				if id, e := strconv.Atoi(ll[1]); e == nil {
 					if dc, ok := s.documents.GetDocument(id); ok == true {
 						if d, err := json.Marshal(dc); err == nil {
@@ -70,7 +70,7 @@ func (s *Server) HandleConnection(conn net.Conn) {
 						}
 					}
 				}
-			case cmd.PutCommandName: // update doc content
+			case cmd.PutCommandName: // update the existing document's content
 				s.logger.Info("[Server]add command message", "name", ll)
 				var doc ds.Document
 				if err := json.Unmarshal([]byte(ll[1]), &doc); err == nil {
@@ -81,6 +81,8 @@ func (s *Server) HandleConnection(conn net.Conn) {
 				} else {
 					s.logger.Error("[Server]failed to unmarshal document", "error", err)
 				}
+			case cmd.ListCommandName: // get document's list (0 - all documents, N - first N documents)
+				response = s.documents.GetDocumentsList(ll[1], "owner")
 			case cmd.DeleteCommandName: // delete existing doc
 				if id, e := strconv.Atoi(ll[1]); e == nil {
 					if ok := s.documents.DeleteDocument(id); ok == true {

@@ -26,36 +26,34 @@ type Document struct {
 	Fields map[string]DocumentField `json:"fields"`
 }
 
-func NewDoc(owner string) *Document {
+func NewDocument(owner string) *Document {
+	text := fmt.Sprintf("Document was created by %s at %s.\n", owner, time.Now().Format("2006-01-02 15:04:05.00"))
 	return &Document{
 		Fields: map[string]DocumentField{
 			"id":    DocumentField{Type: DocumentFieldTypeNumber, Value: 0},
-			"text":  DocumentField{Type: DocumentFieldTypeString, Value: fmt.Sprintf("Document was created by %s at %s.\n", owner, time.Now().Format("2006-01-02 15:04:05.00"))},
 			"owner": DocumentField{Type: DocumentFieldTypeString, Value: owner},
+			"text":  DocumentField{Type: DocumentFieldTypeString, Value: text},
 		},
 	}
 }
 
-func (d *Document) UpdateContent(worker string) error {
-	field, ok := d.Fields["text"]
-	if !ok {
-		slog.Error("field 'text' not found in document")
+func (d *Document) UpdateContent(owner string) error {
+	if field, ok := d.Fields["text"]; ok && field.Type == DocumentFieldTypeString {
+		if text, ok := field.Value.(string); ok {
+			updateMsg := fmt.Sprintf("Document was updated by %s at %s.\n", owner, time.Now().Format("2006-01-02 15:04:05.00"))
+			text += updateMsg
+			field.Value = text
+			d.Fields["text"] = field
+			slog.Info("document updated successfully", "update", updateMsg)
+		} else {
+			msg := "value of 'text' field is not a string"
+			slog.Error(msg, "value", field.Value)
+			return fmt.Errorf(msg)
+		}
+	} else {
+		slog.Error("field 'text' not found in document or is corrupted")
 		return fmt.Errorf("missing 'text' field")
 	}
-	if field.Type != DocumentFieldTypeString {
-		slog.Error("field 'text' has invalid type", "expected", DocumentFieldTypeString, "got", field.Type)
-		return fmt.Errorf("'text' field is not a string")
-	}
-	text, ok := field.Value.(string)
-	if !ok {
-		slog.Error("field 'text' value is not a string", "value", field.Value)
-		return fmt.Errorf("value of 'text' field is not a string")
-	}
-	updateMsg := fmt.Sprintf("Document was updated by %s at %s.\n", worker, time.Now().Format("2006-01-02 15:04:05.00"))
-	text += updateMsg
-	field.Value = text
-	d.Fields["text"] = field
-	slog.Info("document updated successfully", "update", updateMsg)
 	return nil
 }
 

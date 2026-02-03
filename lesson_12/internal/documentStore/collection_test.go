@@ -92,7 +92,7 @@ func TestCollection_MarshalUnmarshal(t *testing.T) {
 	c := &Collection{
 		Name:      "TestCollection",
 		Cfg:       &CollectionConfig{PrimaryKey: "id"},
-		Documents: map[int]Document{1: *NewDoc("user")},
+		Documents: map[int]Document{1: *NewDocument("user")},
 	}
 	data, err := json.Marshal(c)
 	if err != nil {
