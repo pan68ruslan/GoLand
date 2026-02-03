@@ -2,6 +2,7 @@ package documentStore
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -40,19 +41,29 @@ func NewDocument(owner string) *Document {
 func (d *Document) UpdateContent(owner string) error {
 	if field, ok := d.Fields["text"]; ok && field.Type == DocumentFieldTypeString {
 		if text, ok := field.Value.(string); ok {
-			updateMsg := fmt.Sprintf("Document was updated by %s at %s.\n", owner, time.Now().Format("2006-01-02 15:04:05.00"))
+			updateMsg := fmt.Sprintf(
+				"Document was updated by %s at %s.\n",
+				owner,
+				time.Now().Format("2006-01-02 15:04:05.00"),
+			)
 			text += updateMsg
-			field.Value = text
-			d.Fields["text"] = field
-			slog.Info("document updated successfully", "update", updateMsg)
+			d.Fields["text"] = DocumentField{
+				Type:  DocumentFieldTypeString,
+				Value: text,
+			}
+			slog.Info("document updated successfully",
+				"owner", owner,
+				"update", updateMsg,
+			)
 		} else {
 			msg := "value of 'text' field is not a string"
 			slog.Error(msg, "value", field.Value)
-			return fmt.Errorf(msg)
+			return errors.New(msg)
 		}
 	} else {
-		slog.Error("field 'text' not found in document or is corrupted")
-		return fmt.Errorf("missing 'text' field")
+		msg := "missing 'text' field"
+		slog.Error(msg)
+		return errors.New(msg)
 	}
 	return nil
 }
