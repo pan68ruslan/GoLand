@@ -151,6 +151,8 @@ func (c *Collection) Query(params QueryParams) ([]Document, error) {
 
 func (c *Collection) MaxId() int {
 	max := 0
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 	for _, d := range c.Documents {
 		if id, err := toInt(d.Fields["id"].Value); err == nil && id > max {
 			max = id
@@ -176,6 +178,8 @@ func (c *Collection) GetDocumentsList(param ...string) string {
 	if key == "id" {
 		key = ""
 	}
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 	for _, d := range c.Documents {
 		if len(result) > 0 {
 			result += ", "
