@@ -62,7 +62,63 @@ func (c *Client) Disconnect() error {
 	return nil
 }
 
-func (c *Client) Start() { //rd *bufio.Scanner) bool {
+func (c *Client) ProcessResponse(command *cmd.Command) {
+	var response, er = command.Handle()
+	rr := strings.Split(response, "|")
+	if er != nil && rr[0] != cmd.ResponseCommandName {
+		c.logger.Info("unknown response, quit", "response", response)
+	} else {
+		if len(rr) < 2 || len(rr[1]) == 0 {
+			c.logger.Info("empty response was received")
+		}
+	}
+	if len(rr) == 2 && len(rr[1]) > 0 {
+		switch command.Type {
+		case cmd.AddCommandName:
+			if id, err := strconv.Atoi(rr[1]); err == nil {
+				doc := ds.NewDocument(c.name)
+				doc.Fields["id"] = ds.DocumentField{Type: ds.DocumentFieldTypeNumber, Value: id}
+				if e := c.documents.PutDocument(*doc); e == nil {
+					c.logger.Info("new document added", "id", id)
+				} else {
+					c.logger.Error("can't add a new document", "error", e)
+				}
+			}
+		case cmd.GetCommandName:
+			var doc ds.Document
+			var data = []byte(rr[1])
+			if err := json.Unmarshal(data, &doc); err == nil {
+				if e := c.documents.PutDocument(doc); e == nil {
+					c.logger.Info("found document", "doc", rr[1])
+				}
+			}
+		case cmd.PutCommandName:
+			if id, err := strconv.Atoi(rr[1]); err == nil {
+				c.logger.Info("the document was updated", "id", id)
+			} else {
+				c.logger.Error("can't put document", "error", err)
+			}
+		case cmd.ListCommandName:
+			c.logger.Info("the server's list of", "documents", rr[1])
+		case cmd.DeleteCommandName:
+			if id, err := strconv.Atoi(rr[1]); err == nil {
+				var res = ""
+				if id == 0 {
+					res = "wasn't"
+				} else {
+					res = "was"
+				}
+				var msg = fmt.Sprintf("the document %s deleted", res)
+				c.logger.Info(msg, "id", id)
+			} else {
+				c.logger.Error("can't delete document", "error", err)
+			}
+		}
+		c.logger.Info("the local list of", "documents:", c.documents.GetDocumentsList("owner"))
+	}
+}
+
+func (c *Client) Start() {
 	reader := bufio.NewScanner(os.Stdin)
 	if c.conn == nil {
 		err := c.Connect(cmd.Address, reader)
@@ -123,59 +179,7 @@ func (c *Client) Start() { //rd *bufio.Scanner) bool {
 			}
 			// Process the response
 			if command.Value != "" {
-				var response, er = command.Handle()
-				rr := strings.Split(response, "|")
-				if er != nil && rr[0] != cmd.ResponseCommandName {
-					c.logger.Info("unknown response, quit", "response", response)
-				} else {
-					if len(rr) < 2 || len(rr[1]) == 0 {
-						c.logger.Info("empty response was received")
-					}
-				}
-				if len(rr) == 2 && len(rr[1]) > 0 {
-					switch command.Type {
-					case cmd.AddCommandName:
-						if id, err := strconv.Atoi(rr[1]); err == nil {
-							doc := ds.NewDocument(c.name)
-							doc.Fields["id"] = ds.DocumentField{Type: ds.DocumentFieldTypeNumber, Value: id}
-							if e := c.documents.PutDocument(*doc); e == nil {
-								c.logger.Info("new document added", "id", id)
-							} else {
-								c.logger.Error("can't add a new document", "error", e)
-							}
-						}
-					case cmd.GetCommandName:
-						var doc ds.Document
-						var data = []byte(rr[1])
-						if err := json.Unmarshal(data, &doc); err == nil {
-							if e := c.documents.PutDocument(doc); e == nil {
-								c.logger.Info("found document", "doc", rr[1])
-							}
-						}
-					case cmd.PutCommandName:
-						if id, err := strconv.Atoi(rr[1]); err == nil {
-							c.logger.Info("the document was updated", "id", id)
-						} else {
-							c.logger.Error("can't put document", "error", err)
-						}
-					case cmd.ListCommandName:
-						c.logger.Info("the server's list of", "documents", rr[1])
-					case cmd.DeleteCommandName:
-						if id, err := strconv.Atoi(rr[1]); err == nil {
-							var res = ""
-							if id == 0 {
-								res = "wasn't"
-							} else {
-								res = "was"
-							}
-							var msg = fmt.Sprintf("the document %s deleted", res)
-							c.logger.Info(msg, "id", id)
-						} else {
-							c.logger.Error("can't delete document", "error", err)
-						}
-					}
-					c.logger.Info("the local list of", "documents:", c.documents.GetDocumentsList("owner"))
-				}
+				c.ProcessResponse(command)
 			} else {
 				c.logger.Error("This command needs the second parameter.", "command", ll)
 			}
