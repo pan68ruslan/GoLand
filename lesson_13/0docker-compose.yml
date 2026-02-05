@@ -1,0 +1,15 @@
+services:
+
+  server:
+    build:
+      context: .
+      dockerfile: 0Dockerfile
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/data/db
+    environment:
+      - name=value
+
+
+  
