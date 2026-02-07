@@ -136,8 +136,8 @@ func (s *Store) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &out); err != nil {
 		return err
 	}
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	s.Name = out.Name
 	s.Collections = out.Collections
 	return nil
