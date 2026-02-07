@@ -2,17 +2,21 @@ package documentStore
 
 import (
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"testing"
 )
 
-func TestCollection_AddGetDelete(t *testing.T) {
+func newTestCollection() *Collection {
 	cfg := &CollectionConfig{
 		PrimaryKey:    "id",
 		IndexedFields: []string{"id", "name"},
 	}
-	coll := NewCollection("users", cfg, slog.Default())
+	return NewCollection("TestCollection", cfg, slog.Default())
+}
 
+func TestCollection_AddGetDelete(t *testing.T) {
+	coll := newTestCollection()
 	doc := Document{
 		Fields: map[string]DocumentField{
 			"id":   {Type: DocumentFieldTypeString, Value: "u1"},
@@ -22,7 +26,6 @@ func TestCollection_AddGetDelete(t *testing.T) {
 	if err := coll.AddDocument(doc); err != nil {
 		t.Fatalf("AddDocument failed: %v", err)
 	}
-
 	got, ok := coll.GetDocument("u1")
 	if !ok {
 		t.Fatalf("Get failed: document not found")
@@ -30,7 +33,6 @@ func TestCollection_AddGetDelete(t *testing.T) {
 	if got.Fields["name"].Value != "Alice" {
 		t.Errorf("expected name=Alice, got %v", got.Fields["name"].Value)
 	}
-
 	if !coll.DeleteDocument("u1") {
 		t.Fatalf("DeleteDocument failed: document not deleted")
 	}
@@ -39,13 +41,25 @@ func TestCollection_AddGetDelete(t *testing.T) {
 	}
 }
 
-func TestCollection_Query(t *testing.T) {
-	cfg := &CollectionConfig{
-		PrimaryKey:    "id",
-		IndexedFields: []string{"id", "name"},
+func TestListDocuments(t *testing.T) {
+	coll := newTestCollection()
+	for i := 0; i < 3; i++ {
+		doc := Document{
+			Fields: map[string]DocumentField{
+				"id":   {Type: DocumentFieldTypeString, Value: fmt.Sprintf("u%d", i)},
+				"name": {Type: DocumentFieldTypeString, Value: fmt.Sprintf("User%d", i)},
+			},
+		}
+		_ = coll.AddDocument(doc)
 	}
-	coll := NewCollection("users", cfg, slog.Default())
+	docs := coll.ListDocuments()
+	if len(docs) != 3 {
+		t.Errorf("expected 3 documents, got %d", len(docs))
+	}
+}
 
+func TestCollection_Query(t *testing.T) {
+	coll := newTestCollection()
 	docs := []Document{
 		{Fields: map[string]DocumentField{"id": {Type: DocumentFieldTypeString, Value: "u1"}, "name": {Type: DocumentFieldTypeString, Value: "Alice"}}},
 		{Fields: map[string]DocumentField{"id": {Type: DocumentFieldTypeString, Value: "u2"}, "name": {Type: DocumentFieldTypeString, Value: "Bob"}}},
@@ -56,7 +70,6 @@ func TestCollection_Query(t *testing.T) {
 			t.Fatalf("AddDocument failed: %v", err)
 		}
 	}
-
 	minParam := "A"
 	maxParam := "C"
 	params := QueryParams{MinValue: &minParam, MaxValue: &maxParam, Desc: false}
@@ -64,7 +77,6 @@ func TestCollection_Query(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Query failed: %v", err)
 	}
-
 	if len(result) != 2 {
 		t.Errorf("expected 2 results, got %d", len(result))
 	}
@@ -99,11 +111,14 @@ func TestCollectionConfig_MarshalUnmarshal(t *testing.T) {
 }
 
 func TestCollection_MarshalUnmarshal(t *testing.T) {
-	c := &Collection{
-		Name:      "TestCollection",
-		Cfg:       &CollectionConfig{PrimaryKey: "key"},
-		Documents: map[string]Document{"doc1": newDoc("doc1", DocumentField{Type: DocumentFieldTypeString, Value: "First"})},
+	c := newTestCollection()
+	doc := Document{
+		Fields: map[string]DocumentField{
+			"id":   {Type: DocumentFieldTypeString, Value: "id"},
+			"name": {Type: DocumentFieldTypeString, Value: "name"},
+		},
 	}
+	_ = c.AddDocument(doc)
 	data, err := json.Marshal(c)
 	if err != nil {
 		t.Fatalf("marshal failed: %v", err)

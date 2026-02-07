@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"sync"
 )
 
 type Store struct {
-	Name        string
+	Name        string                 `json:"Name"`
 	Collections map[string]*Collection `json:"Collections"`
+	mu          sync.RWMutex
 	Logger      *slog.Logger
 }
 
@@ -27,14 +29,9 @@ func NewStore(name string, logger *slog.Logger) *Store {
 	}
 }
 
-func (s *Store) AddCollection(name string, cfg *CollectionConfig) {
-	s.Collections[name] = NewCollection(name, cfg, s.Logger)
-	s.Logger.Info("Added collection",
-		slog.String("store", s.Name),
-		slog.String("collection", name))
-}
-
 func (s *Store) CreateCollection(name string, cfg *CollectionConfig, logger *slog.Logger) (bool, *Collection) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	if _, ok := s.Collections[name]; ok {
 		fmt.Printf("[Store]The collection '%s' already exists\n", name)
 		return false, nil
@@ -51,6 +48,8 @@ func (s *Store) CreateCollection(name string, cfg *CollectionConfig, logger *slo
 }
 
 func (s *Store) GetCollection(name string) (*Collection, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	if col, ok := s.Collections[name]; ok {
 		fmt.Printf("[Store]The collection '%s' was found\n", name)
 		return col, true
@@ -60,6 +59,8 @@ func (s *Store) GetCollection(name string) (*Collection, bool) {
 }
 
 func (s *Store) DeleteCollection(name string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	if _, ok := s.Collections[name]; ok {
 		fmt.Printf("[Store]The collection '%s' has been deleted\n", name)
 		delete(s.Collections, name)
@@ -74,6 +75,8 @@ func (s *Store) Dump() ([]byte, error) {
 	if s == nil {
 		return nil, fmt.Errorf("store is nil")
 	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	return json.MarshalIndent(s, "", "  ")
 }
 
@@ -116,6 +119,8 @@ func (s *Store) MarshalJSON() ([]byte, error) {
 	if s == nil {
 		return []byte("null"), nil
 	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	fields := map[string]interface{}{
 		"Name":        s.Name,
 		"Collections": s.Collections,
@@ -131,6 +136,8 @@ func (s *Store) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &out); err != nil {
 		return err
 	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	s.Name = out.Name
 	s.Collections = out.Collections
 	return nil

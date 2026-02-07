@@ -101,6 +101,16 @@ func (c *Collection) GetDocument(key string) (*Document, bool) {
 	return &doc, true
 }
 
+func (c *Collection) ListDocuments() []Document {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	docs := make([]Document, 0, len(c.Documents))
+	for _, d := range c.Documents {
+		docs = append(docs, d)
+	}
+	return docs
+}
+
 func (c *Collection) Query(fieldName string, params QueryParams) ([]Document, error) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
