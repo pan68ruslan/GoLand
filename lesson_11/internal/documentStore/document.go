@@ -2,6 +2,7 @@ package documentStore
 
 import (
 	"encoding/json"
+	"sync"
 )
 
 type DocumentFieldType string
@@ -21,6 +22,7 @@ type DocumentField struct {
 
 type Document struct {
 	Fields map[string]DocumentField `json:"fields"`
+	mu     sync.RWMutex
 }
 
 func newDoc(name string, field DocumentField) Document {
@@ -35,6 +37,8 @@ func newDoc(name string, field DocumentField) Document {
 }
 
 func (d *Document) MarshalJSON() ([]byte, error) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
 	out := make(map[string]map[string]interface{})
 	for key, field := range d.Fields {
 		out[key] = map[string]interface{}{
@@ -46,6 +50,8 @@ func (d *Document) MarshalJSON() ([]byte, error) {
 }
 
 func (d *Document) UnmarshalJSON(data []byte) error {
+	d.mu.Lock()
+	defer d.mu.Unlock()
 	fields := make(map[string]DocumentField)
 	if err := json.Unmarshal(data, &fields); err != nil {
 		return err
