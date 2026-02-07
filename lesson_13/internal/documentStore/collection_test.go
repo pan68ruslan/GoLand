@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestCollection_AddGetDelete(t *testing.T) {
+func TestCollection_PutGetDelete(t *testing.T) {
 	coll := NewCollection("users", slog.Default())
 	id := 1
 	doc := Document{

@@ -2,8 +2,76 @@ package documentStore
 
 import (
 	"encoding/json"
+	"errors"
+	"strings"
 	"testing"
+	"time"
 )
+
+func TestUpdateContentSuccess(t *testing.T) {
+	doc := &Document{
+		Fields: map[string]DocumentField{
+			"text": {Type: DocumentFieldTypeString, Value: "Initial content. "},
+		},
+	}
+	err := doc.UpdateContent("Ruslan")
+	if err != nil {
+		t.Fatalf("expected success, got error: %v", err)
+	}
+	updated := doc.Fields["text"].Value.(string)
+	if !strings.Contains(updated, "Document was updated by Ruslan") {
+		t.Errorf("expected update message, got %s", updated)
+	}
+}
+
+func TestUpdateContentMissingTextField(t *testing.T) {
+	doc := &Document{
+		Fields: map[string]DocumentField{
+			"title": {Type: DocumentFieldTypeString, Value: "No text field"},
+		},
+	}
+	err := doc.UpdateContent("Ruslan")
+	if err == nil {
+		t.Fatalf("expected error for missing text field")
+	}
+	if !strings.Contains(err.Error(), "missing 'text' field") {
+		t.Errorf("unexpected error: %v", err)
+	}
+}
+
+func TestUpdateContentWrongType(t *testing.T) {
+	doc := &Document{
+		Fields: map[string]DocumentField{
+			"text": {Type: DocumentFieldTypeString, Value: 123}, // not a string
+		},
+	}
+	err := doc.UpdateContent("Ruslan")
+	if err == nil {
+		t.Fatalf("expected error for wrong type")
+	}
+	if !errors.Is(err, errors.New("value of 'text' field is not a string")) {
+		if !strings.Contains(err.Error(), "value of 'text' field is not a string") {
+			t.Errorf("unexpected error: %v", err)
+		}
+	}
+}
+
+func TestUpdateContentTimestamp(t *testing.T) {
+	doc := &Document{
+		Fields: map[string]DocumentField{
+			"text": {Type: DocumentFieldTypeString, Value: "Initial"},
+		},
+	}
+	err := doc.UpdateContent("Ruslan")
+	if err != nil {
+		t.Fatalf("expected success, got error: %v", err)
+	}
+	updated := doc.Fields["text"].Value.(string)
+	now := time.Now().Format("2006-01-02")
+	if !strings.Contains(updated, now) {
+		t.Errorf("expected timestamp in update message, got %s", updated)
+	}
+}
 
 func TestDocument_MarshalUnmarshal_StringField(t *testing.T) {
 	doc := &Document{
