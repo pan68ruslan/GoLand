@@ -1,0 +1,20 @@
+services:
+  server-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    volumes:
+      - .:/work
+    ports:
+      - "8080:8080"
+    command: ["go", "run", "./cmd/server"]
+
+  server-prod:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    volumes:
+      - ./data:/work/data
+    ports:
+      - "8080:8080"
+    command: ["./server"]
