@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"sync"
 	"time"
 )
 
@@ -25,6 +26,7 @@ type DocumentField struct {
 
 type Document struct {
 	Fields map[string]DocumentField `json:"fields"`
+	mu     sync.RWMutex
 }
 
 func NewDocument(owner string) *Document {
@@ -39,6 +41,8 @@ func NewDocument(owner string) *Document {
 }
 
 func (d *Document) UpdateContent(owner string) error {
+	d.mu.Lock()
+	defer d.mu.Unlock()
 	if field, ok := d.Fields["text"]; ok && field.Type == DocumentFieldTypeString {
 		if text, ok := field.Value.(string); ok {
 			updateMsg := fmt.Sprintf(
@@ -70,6 +74,8 @@ func (d *Document) UpdateContent(owner string) error {
 
 // For marshaling
 func (d *Document) MarshalJSON() ([]byte, error) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
 	out := make(map[string]map[string]interface{})
 	for key, field := range d.Fields {
 		out[key] = map[string]interface{}{
@@ -81,6 +87,8 @@ func (d *Document) MarshalJSON() ([]byte, error) {
 }
 
 func (d *Document) UnmarshalJSON(data []byte) error {
+	d.mu.Lock()
+	defer d.mu.Unlock()
 	fields := make(map[string]DocumentField)
 	if err := json.Unmarshal(data, &fields); err != nil {
 		return err
