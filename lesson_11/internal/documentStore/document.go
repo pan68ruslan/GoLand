@@ -37,8 +37,8 @@ func newDoc(name string, field DocumentField) Document {
 }
 
 func (d *Document) MarshalJSON() ([]byte, error) {
-	d.mu.Lock()
-	defer d.mu.Unlock()
+	d.mu.RLock()
+	defer d.mu.RUnlock()
 	out := make(map[string]map[string]interface{})
 	for key, field := range d.Fields {
 		out[key] = map[string]interface{}{
