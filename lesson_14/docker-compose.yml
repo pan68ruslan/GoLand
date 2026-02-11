@@ -1,20 +1,29 @@
 services:
-  server-dev:
-    build:
-      context: .
-      dockerfile: Dockerfile.dev
-    volumes:
-      - .:/work
+  mongo:
+    image: mongo:7.0
+    container_name: mongo
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: root
+      MONGO_INITDB_DATABASE: app
     ports:
-      - "8080:8080"
-    command: ["go", "run", "./cmd/server"]
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
 
-  server-prod:
+  server:
     build:
       context: .
-      dockerfile: Dockerfile.prod
-    volumes:
-      - ./data:/work/data
+      dockerfile: Dockerfile
+    container_name: go-server
+    restart: always
+    depends_on:
+      - mongo
+    environment:
+      MONGO_URI: mongodb://root:root@mongo:27017/?authSource=admin
     ports:
       - "8080:8080"
-    command: ["./server"]
+
+volumes:
+  mongo_data:
