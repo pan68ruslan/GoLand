@@ -149,7 +149,7 @@ func (c *Collection) Query(params QueryParams) ([]Document, error) {
 	return result, nil
 }
 
-func (c *Collection) MaxId() int {
+func (c *Collection) MaxID() int {
 	max := 0
 	c.mu.RLock()
 	defer c.mu.RUnlock()

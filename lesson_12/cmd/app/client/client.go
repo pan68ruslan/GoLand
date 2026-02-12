@@ -75,7 +75,7 @@ func (c *Client) Connect(conn net.Conn, rd *bufio.Scanner) bool {
 				var response, er = command.Handle()
 				rr := strings.Split(response, "|")
 				if er != nil && len(rr) == 2 && rr[0] == cmd.ResponseCommandName {
-					slog.Info("unknown response, quit", "response", response)
+					slog.Info("unknown response", "response", response)
 					break
 				} else if len(rr) == 2 && len(rr[1]) > 0 {
 					switch command.Type {

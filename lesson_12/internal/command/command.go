@@ -22,7 +22,7 @@ const (
 
 type Command struct {
 	conn  net.Conn
-	Type  string `json:"tape"`
+	Type  string `json:"type"`
 	Value string `json:"value"`
 }
 
@@ -43,8 +43,3 @@ func (c *Command) Handle() (string, error) {
 	resp, err := reader.ReadString('\n')
 	return strings.TrimSpace(resp), err
 }
-
-/*type CommandResponse struct {
-	Result bool   `json:"result"`
-	Value  string `json:"value"`
-}*/

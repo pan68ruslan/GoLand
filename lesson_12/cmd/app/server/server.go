@@ -50,11 +50,11 @@ func (s *Server) HandleConnection(conn net.Conn) {
 				var doc ds.Document
 				if err := json.Unmarshal([]byte(ll[1]), &doc); err == nil {
 					s.logger.Info("[Server]unmarshal document", "doc", ll[1])
-					id := s.documents.MaxId()
+					id := s.documents.MaxID()
 					s.logger.Info("[Server]max document's id", "id", id)
 					doc.Fields["id"] = ds.DocumentField{Type: ds.DocumentFieldTypeNumber, Value: id + 1}
 					if e := s.documents.PutDocument(doc); e == nil {
-						response = fmt.Sprintf("%d", s.documents.MaxId())
+						response = fmt.Sprintf("%d", s.documents.MaxID())
 					}
 				} else {
 					s.logger.Error("[Server]failed to unmarshal document", "error", err)
@@ -76,7 +76,7 @@ func (s *Server) HandleConnection(conn net.Conn) {
 				if err := json.Unmarshal([]byte(ll[1]), &doc); err == nil {
 					s.logger.Info("[Server]unmarshal document", "doc", ll[1])
 					if e := s.documents.PutDocument(doc); e == nil {
-						response = fmt.Sprintf("%d", s.documents.MaxId())
+						response = fmt.Sprintf("%d", s.documents.MaxID())
 					}
 				} else {
 					s.logger.Error("[Server]failed to unmarshal document", "error", err)

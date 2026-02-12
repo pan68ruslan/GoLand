@@ -14,12 +14,12 @@ func main() {
 		return
 	}
 	logger.Info("[Server]server listening", "port", 8080)
-	Server := NewServer("TheServer", logger)
+	server := NewServer("TheServer", logger)
 	for {
 		conn, err := listener.Accept()
 		if err == nil {
 			logger.Info("[Server]connection accepted", "addr", conn.RemoteAddr())
-			go Server.HandleConnection(conn)
+			go server.HandleConnection(conn)
 		} else {
 			logger.Error("[Server]connection failed", "error", err)
 			continue
