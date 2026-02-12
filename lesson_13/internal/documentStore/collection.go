@@ -155,7 +155,7 @@ func (c *Collection) Query(params QueryParams) ([]Document, error) {
 	return result, nil
 }
 
-func (c *Collection) MaxId() int {
+func (c *Collection) MaxID() int {
 	max := 0
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -184,7 +184,7 @@ func (c *Collection) GetDocumentsList(param ...string) string {
 		key = ""
 	}
 	if count == 0 {
-		count = c.MaxId()
+		count = c.MaxID()
 	}
 	items := c.getDocuments(count, key)
 	sort.Slice(items, func(i, j int) bool {

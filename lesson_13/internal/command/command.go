@@ -25,7 +25,7 @@ const Address string = ":8080"
 
 type Command struct {
 	conn  net.Conn
-	Type  string `json:"tape"`
+	Type  string `json:"type"`
 	Value string `json:"value"`
 }
 
