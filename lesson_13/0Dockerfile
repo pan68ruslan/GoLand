@@ -1,0 +1,27 @@
+FROM golang:1.25-alpine3.23  AS build
+
+WORKDIR /work
+
+COPY internal internal
+COPY cmd cmd
+#COPY data data
+COPY go.mod go.mod
+#COPY go.sum go.sum
+
+ENV CGO_ENABLED=0
+ENV GOOS=linux
+ENV GOARCH=amd64
+#ENV GOOS=darwin
+#ENV GOARCH=arm64
+
+#RUN go build -o /tmp/server ./cmd/server
+EXPOSE 8080
+
+#docker run -ti -v $(pwd)/data:/work/data ex
+#docker build -t l13-3 .
+#docker run -v $(pwd)/data:/work/data l13-3
+#mkdir data
+
+#VOLUME [ "data" ]
+#CMD ["cp", "/tmp/server", "./data/server"]
+CMD ["go", "run", "./cmd/server"]
