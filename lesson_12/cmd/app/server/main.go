@@ -4,6 +4,9 @@ import (
 	"log/slog"
 	"net"
 	"os"
+	"os/signal"
+	"sync"
+	"syscall"
 )
 
 func main() {
@@ -15,14 +18,30 @@ func main() {
 	}
 	logger.Info("[Server]server listening", "port", 8080)
 	server := NewServer("TheServer", logger)
-	for {
-		conn, err := listener.Accept()
-		if err == nil {
-			logger.Info("[Server]connection accepted", "addr", conn.RemoteAddr())
-			go server.HandleConnection(conn)
-		} else {
-			logger.Error("[Server]connection failed", "error", err)
-			continue
+
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
+	var wg sync.WaitGroup
+	go func() {
+		for {
+			conn, err := listener.Accept()
+			if err != nil {
+				logger.Error("[Server] connection failed", "error", err)
+				return
+			}
+			logger.Info("[Server] connection accepted", "addr", conn.RemoteAddr())
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				server.HandleConnection(conn)
+			}()
 		}
+	}()
+	<-stop
+	logger.Info("[Server] shutdown signal received")
+	if err := listener.Close(); err != nil {
+		logger.Error("[Server] failed to close listener", "error", err)
 	}
+	wg.Wait()
+	logger.Info("[Server] graceful shutdown complete")
 }
