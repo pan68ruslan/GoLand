@@ -12,8 +12,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-//const stringURL = "mongodb://root:root@localhost:27017/?authSource=admin"
-
 func main() {
 	ctx := context.Background()
 	mongoURI := os.Getenv("MONGO_URI")

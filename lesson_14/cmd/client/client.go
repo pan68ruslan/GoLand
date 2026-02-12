@@ -7,7 +7,6 @@ import (
 	"net/http"
 )
 
-// універсальна функція для виклику будь-якого ендпоінта
 func callAPI(endpoint string, payload interface{}) (map[string]interface{}, error) {
 	url := "http://localhost:8080" + endpoint
 	body, _ := json.Marshal(payload)
@@ -16,7 +15,6 @@ func callAPI(endpoint string, payload interface{}) (map[string]interface{}, erro
 		return nil, err
 	}
 	defer resp.Body.Close()
-
 	var result map[string]interface{}
 	json.NewDecoder(resp.Body).Decode(&result)
 	return result, nil
@@ -30,7 +28,6 @@ func callAPIArray(endpoint string, payload interface{}) ([]map[string]interface{
 		return nil, err
 	}
 	defer resp.Body.Close()
-
 	var result []map[string]interface{}
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return nil, err
@@ -46,15 +43,12 @@ func callAPIStringArray(endpoint string, payload interface{}) ([]string, error) 
 		return nil, err
 	}
 	defer resp.Body.Close()
-
 	var result []string
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return nil, err
 	}
 	return result, nil
 }
-
-// ---------- Клієнтські методи ----------
 
 // /create_collection
 func CreateCollection(collection string) {
@@ -94,6 +88,12 @@ func DeleteCollection(collection string) {
 	fmt.Println("DELETE_COLLECTION:", res, "ERR:", err)
 }
 
+// /list_collections
+func ListCollections() {
+	res, err := callAPIStringArray("/list_collections", map[string]interface{}{})
+	fmt.Println("LIST_COLLECTIONS:", res, "ERR:", err)
+}
+
 // /create_index
 func CreateIndex(collection, field string) {
 	res, err := callAPI("/create_index", map[string]interface{}{"collection_name": collection, "field": field})
@@ -104,10 +104,4 @@ func CreateIndex(collection, field string) {
 func DeleteIndex(collection, indexName string) {
 	res, err := callAPI("/delete_index", map[string]interface{}{"collection_name": collection, "index_name": indexName})
 	fmt.Println("DELETE_INDEX:", res, "ERR:", err)
-}
-
-// /list_collections
-func ListCollections() {
-	res, err := callAPIStringArray("/list_collections", map[string]interface{}{})
-	fmt.Println("LIST_COLLECTIONS:", res, "ERR:", err)
 }
