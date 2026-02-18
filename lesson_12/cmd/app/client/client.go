@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
+	"os"
 	"strconv"
 	"strings"
 
@@ -14,118 +15,259 @@ import (
 )
 
 type Client struct {
-	name      string
-	documents ds.Collection
-	logger    *slog.Logger
+	name           string               `json:"Name"`
+	store          ds.Store             `json:"Store"`
+	cfg            *ds.CollectionConfig `json:"Config"`
+	currCollection *ds.Collection
+	conn           net.Conn
+	logger         *slog.Logger
 }
 
-func NewClient(name string, logger *slog.Logger) *Client {
-	docs := ds.NewCollection("Documents", logger)
+func NewClient(logger *slog.Logger) *Client {
+	store := ds.NewStore("ClientStore", logger)
+	cfg := ds.NewConfig()
 	return &Client{
-		name:      name,
-		documents: docs,
-		logger:    logger,
+		name:           "noname",
+		store:          *store,
+		cfg:            cfg,
+		currCollection: nil,
+		conn:           nil,
+		logger:         logger,
 	}
 }
 
-func (c *Client) Connect(conn net.Conn, rd *bufio.Scanner) bool {
-	slog.Info("write command: ")
-	for rd.Scan() {
-		line := rd.Text()
+func (c *Client) Connect(address string, reader *bufio.Scanner) error {
+	if c.conn != nil {
+		c.logger.Info("Already connected", "address", c.conn.RemoteAddr())
+		return nil
+	}
+	writer := bufio.NewWriter(os.Stdout)
+	writer.WriteString("Set the client name: ")
+	writer.Flush()
+	reader.Scan()
+	c.name = reader.Text()
+	conn, err := net.Dial("tcp", address)
+	if err != nil {
+		return fmt.Errorf("failed to connect: %w", err)
+	}
+	c.conn = conn
+	c.logger.Info("Connected to...", "address", address)
+	return nil
+}
+
+func (c *Client) Disconnect() error {
+	if c.conn == nil {
+		return fmt.Errorf("no active connection")
+	}
+	err := c.conn.Close()
+	if err != nil {
+		return fmt.Errorf("failed to disconnect: %w", err)
+	}
+	c.logger.Info("Disconnected")
+	c.conn = nil
+	return nil
+}
+
+func (c *Client) Start() {
+	reader := bufio.NewScanner(os.Stdin)
+	if c.conn == nil {
+		err := c.Connect(cmd.Address, reader)
+		if err == nil {
+			c.logger.Info("client connected successfully", "address", c.conn.RemoteAddr())
+		} else {
+			c.logger.Error("fail at connecting", "error", err)
+		}
+	}
+	c.logger.Info("write command: ")
+	for reader.Scan() {
+		line := reader.Text()
 		ll := strings.Split(line, " ")
+
 		if len(ll) <= 2 {
 			// Prepare and send the command
-			var command = cmd.NewCommand(conn)
+			var command = cmd.NewCommand(c.conn)
 			command.Type = ll[0]
-			if len(ll) == 2 {
-				command.Value = fmt.Sprintf("%s", ll[1])
+			if len(ll) == 2 && ll[1] != "" {
+				command.Value = ll[1]
 			}
-			switch ll[0] {
-			case cmd.AddCommandName:
-				var doc = ds.NewDocument(c.name)
-				if msg, e := json.Marshal(doc); e == nil {
-					command.Value = string(msg)
-				}
-			case cmd.GetCommandName:
+			if c.currCollection != nil {
+				command.ColName = c.currCollection.Name
+			}
+			c.logger.Info("command type", "type", command.Type)
+			switch command.Type {
+			case cmd.DelCollectionCmd:
+			case cmd.DelDocumentCmd:
+			case cmd.GetDocumentCmd:
+			case cmd.DocumentsListCmd:
 				break
-			case cmd.PutCommandName:
-				if len(ll) == 2 {
+			case cmd.AddCollectionCmd:
+				command.ColName = ""
+			case cmd.CollectionsListCmd:
+				//command.Value = ""
+				command.ColName = ""
+			case cmd.SetCollectionCmd:
+				if coll, ok := c.store.GetCollection(ll[1]); ok {
+					c.currCollection = coll
+				}
+			case cmd.AddDocumentCmd:
+				if c.currCollection != nil {
+					doc := ds.NewDocument(c.name)
+					if msg, e := json.Marshal(doc); e == nil {
+						command.Value = string(msg)
+					} else {
+						c.logger.Error("add marshal document error", "error", e)
+					}
+				}
+			case cmd.PutDocumentCmd:
+				if c.currCollection != nil && len(ll) == 2 {
 					if id, err := strconv.Atoi(ll[1]); err == nil {
-						if doc, ok := c.documents.GetDocument(id); ok {
+						if doc, ok := c.currCollection.GetDocument(id); ok {
 							if err = doc.UpdateContent(c.name); err == nil {
 								if msg, e := json.Marshal(doc); e == nil {
 									command.Value = string(msg)
+								} else {
+									c.logger.Error("put marshal document error", "error", e)
 								}
+							} else {
+								c.logger.Error("fail at update document", "error", err)
 							}
 						}
+					} else {
+						c.logger.Error("fail at convert the document id", "error", err)
 					}
 				}
-			case cmd.ListCommandName:
+			case cmd.ConnectCommandName:
+				var address string
 				if len(ll) == 1 {
-					command.Value = "0"
+					address = cmd.Address
+				} else {
+					address = ll[1]
 				}
-			case cmd.DeleteCommandName:
-				break
+				if e := c.Connect(address, reader); e == nil {
+					c.logger.Info("client connected successfully", "address", address)
+				} else {
+					c.logger.Error("fail at connecting", "error", e)
+				}
+				command.Value = ""
+			case cmd.DisconnectCommandName:
+				if e := c.Disconnect(); e == nil {
+					c.logger.Info("client disconnected successfully", "address", c.conn.RemoteAddr())
+				} else {
+					c.logger.Error("fail at disconnecting", "error", e)
+				}
+				command.Value = ""
 			default:
-				slog.Error("unknown command: "+line+"\n", "available commands", "add, get, put, del, list")
-				return true
+				c.logger.Error("unknown command", "command", ll)
 			}
 			// Process the response
-			if command.Value != "" {
-				var response, er = command.Handle()
-				rr := strings.Split(response, "|")
-				if er != nil && len(rr) == 2 && rr[0] == cmd.ResponseCommandName {
-					slog.Info("unknown response", "response", response)
-					break
-				} else if len(rr) == 2 && len(rr[1]) > 0 {
-					switch command.Type {
-					case cmd.AddCommandName:
-						if id, err := strconv.Atoi(rr[1]); err == nil {
-							doc := ds.NewDocument(c.name)
-							doc.Fields["id"] = ds.DocumentField{Type: ds.DocumentFieldTypeNumber, Value: id}
-							if e := c.documents.PutDocument(*doc); e == nil {
-								slog.Info("new document added", "id", id)
-							} else {
-								slog.Error("can't add a new document", "error", e)
-							}
-						}
-					case cmd.GetCommandName:
-						var doc ds.Document
-						var data = []byte(rr[1])
-						if err := json.Unmarshal(data, &doc); err == nil {
-							if e := c.documents.PutDocument(doc); e == nil {
-								slog.Info("found document", "doc", rr[1])
-							}
-						}
-					case cmd.PutCommandName:
-						if id, err := strconv.Atoi(rr[1]); err == nil {
-							slog.Info("the document was updated", "id", id)
-						} else {
-							slog.Error("can't put document", "error", err)
-						}
-					case cmd.ListCommandName:
-						slog.Info("the server's list of", "documents", rr[1])
-					case cmd.DeleteCommandName:
-						if id, err := strconv.Atoi(rr[1]); err == nil {
-							var res = ""
-							if id == 0 {
-								res = "wasn't"
-							} else {
-								res = "was"
-							}
-							var msg = fmt.Sprintf("the document %s deleted", res)
-							slog.Info(msg, "id", id)
-						} else {
-							slog.Error("can't delete document", "error", err)
-						}
-					}
-					slog.Info("the local list of", "documents:", c.documents.GetDocumentsList("3", "owner"))
-				}
+			if command.Value == "0" && !(command.Type == cmd.DocumentsListCmd || command.Type == cmd.AddCollectionCmd || command.Type == cmd.CollectionsListCmd) {
+				c.logger.Error("This command needs the second parameter.", "current command:", ll)
 			} else {
-				slog.Error("This command needs the second parameter.", "command", ll)
+				c.ProcessResponse(command)
+			}
+		} else {
+			c.logger.Error("entered command is too long", "command", ll)
+		}
+		c.logger.Info("write the next command: ")
+	}
+}
+
+func (c *Client) ProcessResponse(command *cmd.Command) {
+	var response, err = command.Handle()
+	rr := strings.Split(response, "|")
+	if err == nil && len(rr) == 3 && rr[0] == cmd.ResponseCommandName {
+		if command.Type == cmd.AddCollectionCmd {
+			if ok, cl := c.store.CreateCollection(rr[2], c.logger); ok {
+				c.currCollection = cl
+				c.logger.Info("Collection was created", "name", rr[2])
 			}
 		}
-		slog.Info("write the next command: ")
+		if len(rr[2]) > 0 {
+			if rr[2] == "ERROR" {
+				c.logger.Error("last response get the error", "error", rr[1])
+			} else {
+				if col, success := c.store.GetCollection(rr[2]); success {
+					c.currCollection = col
+				} else {
+					c.currCollection = nil
+					c.logger.Error("failed to find collection", "name", rr[2])
+				}
+			}
+		}
+		if c.currCollection != nil && command.Type != cmd.AddCollectionCmd {
+			switch command.Type {
+			case cmd.DelDocumentCmd:
+				if id, e := strconv.Atoi(rr[1]); e == nil {
+					var res = ""
+					if ok := c.currCollection.DeleteDocument(id); ok {
+						res = "was"
+					} else {
+						res = "wasn't"
+					}
+					var msg = fmt.Sprintf("the document %s deleted in collection %s", res, c.currCollection.Name)
+					c.logger.Info(msg, "id", id)
+				} else {
+					c.logger.Error("can't parse document id", "error", e)
+				}
+			case cmd.AddDocumentCmd:
+				doc := ds.NewDocument(c.name)
+				var data = []byte(rr[1])
+				e := json.Unmarshal(data, &doc)
+				if e == nil {
+					e = c.currCollection.PutDocument(*doc)
+					if e == nil {
+						c.logger.Info("new document added")
+					} else {
+						c.logger.Error("failed to add document")
+					}
+				} else {
+					c.logger.Error("failed to marshal document", "error", e)
+				}
+			case cmd.GetDocumentCmd:
+				var doc ds.Document
+				var data = []byte(rr[1])
+				e := json.Unmarshal(data, &doc)
+				if e == nil {
+					if id, ei := ds.ToInt(doc.Fields["id"]); ei == nil {
+						e = c.currCollection.PutDocument(doc)
+						if e == nil {
+							c.logger.Info("found document", "doc", doc)
+						} else {
+							c.logger.Error("failed to get document", "id", id)
+						}
+					} else {
+						c.logger.Error("failed to get document's id", "error", ei)
+					}
+				} else {
+					c.logger.Error("failed to marshal document", "error", e)
+				}
+			case cmd.PutDocumentCmd:
+				if id, e := strconv.Atoi(rr[1]); e == nil {
+					c.logger.Info("the document was updated", "id", id)
+				} else {
+					c.logger.Error("can't put document", "error", e)
+				}
+			case cmd.DocumentsListCmd:
+				c.logger.Info("the server's list of", "documents", rr[1])
+			case cmd.DelCollectionCmd:
+				if ok := c.store.DeleteCollection(rr[1]); ok {
+					c.logger.Info("the collection was deleted", "name", rr[1])
+				} else {
+					c.logger.Error("the collection was not deleted", "name", rr[1])
+				}
+			case cmd.CollectionsListCmd:
+				c.logger.Info("the server's list of", "collections", rr[1])
+			default:
+				c.logger.Error("unknown response", "response", response)
+			}
+		} else if command.Type == cmd.CollectionsListCmd {
+			c.logger.Info("the server's list of", "collections", rr[1])
+		}
+		if c.currCollection != nil {
+			c.logger.Info("the local list of", "documents:", c.currCollection.GetDocumentsList("owner"))
+		}
+		c.logger.Info("the local list of", "collections:", c.store.GetCollectionList())
+	} else {
+		c.logger.Error("cannot parse the response", "response", response)
 	}
-	return false
 }

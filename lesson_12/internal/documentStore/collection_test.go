@@ -48,10 +48,10 @@ func TestCollection_Query(t *testing.T) {
 			t.Fatalf("AddDocument failed: %v", err)
 		}
 	}
-	minParam := id1
-	maxParam := id3
-	params := QueryParams{MinValue: minParam, MaxValue: maxParam, Desc: false}
-	result, err := coll.Query(params)
+	params := NewQueryParams() //{MinValue: minParam, MaxValue: maxParam, Desc: false}
+	params.MinValue = id1
+	params.MaxValue = id3
+	result, err := coll.Query(*params)
 	if err != nil {
 		t.Fatalf("Query failed: %v", err)
 	}

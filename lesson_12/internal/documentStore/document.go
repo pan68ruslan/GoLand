@@ -76,6 +76,36 @@ func (d *Document) UpdateContent(owner string) error {
 func (d *Document) MarshalJSON() ([]byte, error) {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
+	out := make(map[string]interface{})
+	fields := make(map[string]map[string]interface{})
+	for key, field := range d.Fields {
+		fields[key] = map[string]interface{}{
+			"type":  field.Type,
+			"value": field.Value,
+		}
+	}
+	out["fields"] = fields
+	return json.Marshal(out)
+}
+
+func (d *Document) UnmarshalJSON(data []byte) error {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	wrapper := make(map[string]map[string]DocumentField)
+	if err := json.Unmarshal(data, &wrapper); err != nil {
+		return err
+	}
+	if fields, ok := wrapper["fields"]; ok {
+		d.Fields = fields
+	} else {
+		return errors.New("missing 'fields' key in JSON")
+	}
+	return nil
+}
+
+/*func (d *Document) MarshalJSON() ([]byte, error) {
+	d.mu.RLock()
+	defer d.mu.RUnlock()
 	out := make(map[string]map[string]interface{})
 	for key, field := range d.Fields {
 		out[key] = map[string]interface{}{
@@ -95,4 +125,4 @@ func (d *Document) UnmarshalJSON(data []byte) error {
 	}
 	d.Fields = fields
 	return nil
-}
+}*/

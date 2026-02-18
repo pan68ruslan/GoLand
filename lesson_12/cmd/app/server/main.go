@@ -26,10 +26,10 @@ func main() {
 		for {
 			conn, err := listener.Accept()
 			if err != nil {
-				logger.Error("[Server] connection failed", "error", err)
+				logger.Error("[Server]connection failed", "error", err)
 				return
 			}
-			logger.Info("[Server] connection accepted", "addr", conn.RemoteAddr())
+			logger.Info("[Server]connection accepted", "addr", conn.RemoteAddr())
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
@@ -38,10 +38,10 @@ func main() {
 		}
 	}()
 	<-stop
-	logger.Info("[Server] shutdown signal received")
+	logger.Info("[Server]shutdown signal received")
 	if err := listener.Close(); err != nil {
-		logger.Error("[Server] failed to close listener", "error", err)
+		logger.Error("[Server]failed to close listener", "error", err)
 	}
 	wg.Wait()
-	logger.Info("[Server] graceful shutdown complete")
+	logger.Info("[Server]graceful shutdown complete")
 }

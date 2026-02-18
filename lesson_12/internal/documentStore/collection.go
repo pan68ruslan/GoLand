@@ -69,22 +69,22 @@ func (c *Collection) PutDocument(doc Document) error {
 	if !ok || field.Type != DocumentFieldTypeNumber {
 		return fmt.Errorf("document missing primary key field or wrong type")
 	}
-	key, err := toInt(field.Value)
+	key, err := ToInt(field.Value)
 	if err != nil {
 		return err
 	}
 	if oldDoc, exists := c.Documents[key]; exists {
 		for _, idxField := range c.Cfg.IndexedFields {
 			if oldField, ok := oldDoc.Fields[idxField]; ok {
-				oldId, _ := toInt(oldField)
+				oldId, _ := ToInt(oldField)
 				c.Indexes[idxField].RemoveFromIndex(oldId, key)
 			}
 		}
 	}
 	c.Documents[key] = doc
 	for _, idxField := range c.Cfg.IndexedFields {
-		if field, ok := doc.Fields[idxField]; ok {
-			id, _ := toInt(field.Value)
+		if fl, ok := doc.Fields[idxField]; ok {
+			id, _ := ToInt(fl.Value)
 			c.Indexes[idxField].Insert(id, key)
 		}
 	}
@@ -100,7 +100,7 @@ func (c *Collection) DeleteDocument(key int) bool {
 	}
 	for _, idxField := range c.Cfg.IndexedFields {
 		if field, ok := doc.Fields[idxField]; ok {
-			id, _ := toInt(field.Value)
+			id, _ := ToInt(field.Value)
 			c.Indexes[idxField].RemoveFromIndex(id, key)
 		}
 	}
@@ -154,7 +154,7 @@ func (c *Collection) MaxID() int {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	for _, d := range c.Documents {
-		if id, err := toInt(d.Fields["id"].Value); err == nil && id > max {
+		if id, err := ToInt(d.Fields["id"].Value); err == nil && id > max {
 			max = id
 		}
 	}
@@ -163,8 +163,8 @@ func (c *Collection) MaxID() int {
 
 func (c *Collection) GetDocumentsList(param ...string) string {
 	result := ""
-	count := 0
-	key := ""
+	count := 0 // 0 - all documents, N - first N documents
+	key := "id"
 	if len(param) > 0 {
 		if i, err := strconv.Atoi(param[0]); err == nil {
 			count = i
@@ -175,9 +175,6 @@ func (c *Collection) GetDocumentsList(param ...string) string {
 			key = param[1]
 		}
 	}
-	if key == "id" {
-		key = ""
-	}
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	for _, d := range c.Documents {
@@ -185,22 +182,22 @@ func (c *Collection) GetDocumentsList(param ...string) string {
 			result += ", "
 		}
 		info := ""
-		if key != "" {
-			if dt, ok := d.Fields[key].Value.(string); ok && dt != "" {
-				info = fmt.Sprintf("[%s]", dt)
+		if key != "id" {
+			if field, ok := d.Fields[key].Value.(string); ok && field != "" {
+				info = fmt.Sprintf("(%s)", field)
 			}
 		}
-		id, _ := toInt(d.Fields["id"].Value)
+		id, _ := ToInt(d.Fields["id"].Value)
 		result += fmt.Sprintf("%d%s", id, info)
 		count--
 		if count == 0 {
 			break
 		}
 	}
-	return result
+	return fmt.Sprintf("[%s]", result)
 }
 
-func toInt(val interface{}) (int, error) {
+func ToInt(val interface{}) (int, error) {
 	switch v := val.(type) {
 	case int:
 		return v, nil

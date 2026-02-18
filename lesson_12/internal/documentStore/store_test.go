@@ -24,16 +24,12 @@ func TestNewStore(t *testing.T) {
 
 func TestCreateGetDeleteCollection(t *testing.T) {
 	s := NewStore("TestStore", logger)
-	ok, coll := s.CreateCollection("Coll1", newCfg(), logger)
+	ok, coll := s.CreateCollection("Coll1", logger)
 	if !ok || coll == nil {
 		t.Fatalf("expected collection created")
 	}
 	if _, exists := s.Collections["Coll1"]; !exists {
 		t.Errorf("collection not stored in map")
-	}
-	ok, _ = s.CreateCollection("Coll1", newCfg(), logger)
-	if ok {
-		t.Errorf("expected duplicate create to fail")
 	}
 	got, ok := s.GetCollection("Coll1")
 	if !ok || got == nil {
@@ -52,7 +48,7 @@ func TestCreateGetDeleteCollection(t *testing.T) {
 
 func TestMarshalUnmarshalStore(t *testing.T) {
 	s := NewStore("MarshalStore", logger)
-	s.CreateCollection("Coll1", newCfg(), logger)
+	s.CreateCollection("Coll1", logger)
 	data, err := s.MarshalJSON()
 	if err != nil {
 		t.Fatalf("marshal failed: %v", err)
@@ -71,7 +67,7 @@ func TestMarshalUnmarshalStore(t *testing.T) {
 
 func TestDumpAndNewStoreFromDump(t *testing.T) {
 	s := NewStore("DumpStore", logger)
-	s.CreateCollection("Coll1", newCfg(), logger)
+	s.CreateCollection("Coll1", logger)
 	data, err := s.Dump()
 	if err != nil {
 		t.Fatalf("dump failed: %v", err)
@@ -90,7 +86,7 @@ func TestDumpAndNewStoreFromDump(t *testing.T) {
 
 func TestDumpToFileAndNewStoreFromFile(t *testing.T) {
 	s := NewStore("FileStore", logger)
-	s.CreateCollection("Coll1", newCfg(), logger)
+	s.CreateCollection("Coll1", logger)
 	tmpfile := "test_store.json"
 	defer os.Remove(tmpfile)
 	if err := s.DumpToFile(tmpfile); err != nil {

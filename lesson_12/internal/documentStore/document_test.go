@@ -5,38 +5,49 @@ import (
 	"testing"
 )
 
-func TestDocument_MarshalUnmarshal_StringField(t *testing.T) {
-	doc := &Document{
-		Fields: map[string]DocumentField{
-			"title": {Type: DocumentFieldTypeString, Value: "MyTitle"},
-			"text":  {Type: DocumentFieldTypeString, Value: "MyText"},
-		},
+func TestNewDocument(t *testing.T) {
+	doc := NewDocument("User")
+	if doc == nil {
+		t.Fatal("NewDocument повернув nil")
 	}
-	data, err := json.Marshal(doc)
-	if err != nil {
-		t.Fatalf("marshal failed: %v", err)
+	if doc.Fields["owner"].Value != "User" {
+		t.Errorf("очікував owner=User, отримав %v", doc.Fields["owner"].Value)
 	}
-	var doc2 Document
-	if err := json.Unmarshal(data, &doc2); err != nil {
-		t.Fatalf("unmarshal failed: %v", err)
-	}
-	field, ok := doc2.Fields["title"]
-	if !ok {
-		t.Errorf("expected field 'title' present")
-	}
-	if field.Type != DocumentFieldTypeString {
-		t.Errorf("expected type 'string', got %s", field.Type)
-	}
-	if field.Value != "MyTitle" {
-		t.Errorf("expected value 'MyTitle', got %v", field.Value)
+	if _, ok := doc.Fields["text"]; !ok {
+		t.Error("очікував поле 'text'")
 	}
 }
 
-func TestDocument_MarshalUnmarshal_NumberAndBool(t *testing.T) {
+func TestMarshalJSON(t *testing.T) {
+	doc := NewDocument("User")
+	data, err := json.Marshal(doc)
+	if err != nil {
+		t.Fatalf("MarshalJSON fails: %v", err)
+	}
+	if len(data) == 0 {
+		t.Error("JSON is expected")
+	}
+}
+
+func TestUnmarshalJSON(t *testing.T) {
+	doc := NewDocument("User")
+	data, _ := json.Marshal(doc)
+	var newDoc Document
+	err := json.Unmarshal(data, &newDoc)
+	if err != nil {
+		t.Fatalf("UnmarshalJSON повернув помилку: %v", err)
+	}
+	if newDoc.Fields["owner"].Value != "User" {
+		t.Errorf("expected owner=User, got %v", newDoc.Fields["owner"].Value)
+	}
+}
+
+func TestDocument_MarshalUnmarshal_NumberAndString(t *testing.T) {
 	doc := &Document{
 		Fields: map[string]DocumentField{
-			"pages":      {Type: DocumentFieldTypeNumber, Value: 42},
-			"isApproved": {Type: DocumentFieldTypeBool, Value: true},
+			"id":    DocumentField{Type: DocumentFieldTypeNumber, Value: 0},
+			"owner": DocumentField{Type: DocumentFieldTypeString, Value: "owner"},
+			"text":  DocumentField{Type: DocumentFieldTypeString, Value: "text"},
 		},
 	}
 	data, err := json.Marshal(doc)
@@ -47,17 +58,20 @@ func TestDocument_MarshalUnmarshal_NumberAndBool(t *testing.T) {
 	if err := json.Unmarshal(data, &doc2); err != nil {
 		t.Fatalf("unmarshal failed: %v", err)
 	}
-	if v := doc2.Fields["pages"].Value; v != float64(42) {
-		t.Errorf("expected 42, got %v", v)
+	if v, ok := doc2.Fields["id"].Value.(float64); !ok || v != 0 {
+		t.Errorf("expected id=0, got %v", doc2.Fields["id"].Value)
 	}
-	if v := doc2.Fields["isApproved"].Value; v != true {
-		t.Errorf("expected true, got %v", v)
+	if v, ok := doc2.Fields["owner"].Value.(string); !ok || v != "owner" {
+		t.Errorf("expected text='owner', got %v", doc2.Fields["owner"].Value)
+	}
+	if v, ok := doc2.Fields["text"].Value.(string); !ok || v != "text" {
+		t.Errorf("expected text='text', got %v", doc2.Fields["text"].Value)
 	}
 }
 
 func TestDocument_UnmarshalEmpty(t *testing.T) {
 	var doc Document
-	err := json.Unmarshal([]byte(`{}`), &doc)
+	err := json.Unmarshal([]byte(`{"fields":{}}`), &doc)
 	if err != nil {
 		t.Fatalf("unmarshal empty failed: %v", err)
 	}
@@ -75,7 +89,7 @@ func TestDocument_MarshalEmpty(t *testing.T) {
 	if err != nil {
 		t.Fatalf("marshal empty failed: %v", err)
 	}
-	if string(data) != "{}" {
+	if string(data) != "{\"fields\":{}}" {
 		t.Errorf("expected '{}', got %s", string(data))
 	}
 }

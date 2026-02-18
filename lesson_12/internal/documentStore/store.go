@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strconv"
 	"sync"
 )
 
@@ -17,10 +18,10 @@ type Store struct {
 
 func NewStore(name string, logger *slog.Logger) *Store {
 	var nm string
-	if name != "" {
-		nm = name
-	} else {
+	if name == "" {
 		nm = "DocumentStore"
+	} else {
+		nm = name
 	}
 	return &Store{
 		Name:        nm,
@@ -29,22 +30,17 @@ func NewStore(name string, logger *slog.Logger) *Store {
 	}
 }
 
-func (s *Store) CreateCollection(name string, cfg *CollectionConfig, logger *slog.Logger) (bool, *Collection) {
+func (s *Store) CreateCollection(name string, logger *slog.Logger) (bool, *Collection) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if _, ok := s.Collections[name]; ok {
+	if cl, ok := s.Collections[name]; ok {
 		s.Logger.Info(fmt.Sprintf("[Store]The collection '%s' already exists\n", name))
-		return false, nil
+		return true, cl
 	}
-	col := &Collection{
-		Name:      name,
-		Cfg:       cfg,
-		Documents: make(map[int]Document),
-		Logger:    logger,
-	}
-	s.Collections[name] = col
+	col := NewCollection(name, logger)
+	s.Collections[name] = &col
 	s.Logger.Info(fmt.Sprintf("[Store]The collection '%s' was created\n", name))
-	return true, col
+	return true, &col
 }
 
 func (s *Store) GetCollection(name string) (*Collection, bool) {
@@ -68,6 +64,29 @@ func (s *Store) DeleteCollection(name string) bool {
 	}
 	s.Logger.Info(fmt.Sprintf("[Store]The collection '%s' doesn't exist\n", name))
 	return false
+}
+
+func (s *Store) GetCollectionList(param ...string) string {
+	result := ""
+	count := 0
+	if len(param) > 0 {
+		if i, err := strconv.Atoi(param[0]); err == nil {
+			count = i
+		}
+	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	for _, c := range s.Collections {
+		if len(result) > 0 {
+			result += ", "
+		}
+		result += c.Name
+		count--
+		if count == 0 {
+			break
+		}
+	}
+	return fmt.Sprintf("[%s]", result)
 }
 
 // For Dump
