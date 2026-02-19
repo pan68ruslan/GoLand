@@ -46,8 +46,13 @@ func (c *Command) Handle() (string, error) {
 	//defer c.conn.Close()
 	var reader = bufio.NewReader(c.conn)
 	var writer = bufio.NewWriter(c.conn)
-	_, _ = writer.WriteString(fmt.Sprintf("%s|%s|%s\n", c.Type, c.Value, c.ColName))
-	_ = writer.Flush()
-	resp, err := reader.ReadString('\n')
-	return strings.TrimSpace(resp), err
+	_, err := writer.WriteString(fmt.Sprintf("%s|%s|%s\n", c.Type, c.Value, c.ColName))
+	if err != nil {
+		return "", err
+	}
+	if err = writer.Flush(); err != nil {
+		return "", err
+	}
+	resp, e := reader.ReadString('\n')
+	return strings.TrimSpace(resp), e
 }
