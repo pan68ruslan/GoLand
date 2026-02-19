@@ -139,7 +139,7 @@ func (c *Client) Start() {
 				command.Value = ""
 			case cmd.DisconnectCommandName:
 				if e := c.Disconnect(); e == nil {
-					c.logger.Info("client disconnected successfully", "address", c.conn.RemoteAddr())
+					c.logger.Info("client disconnected successfully")
 				} else {
 					c.logger.Error("fail at disconnecting", "error", e)
 				}
@@ -199,7 +199,7 @@ func (c *Client) ProcessResponse(command *cmd.Command) {
 				case cmd.CollectionsListCmd:
 					c.logger.Info("the server's list of", "collections", rr[1])
 				}
-			} else {
+			} else if c.currCollection != nil {
 				switch command.Type {
 				case cmd.DelDocumentCmd:
 					if id, e := strconv.Atoi(rr[1]); e == nil {
